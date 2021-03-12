@@ -1,0 +1,332 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: 'NYA Admin Server'
+
+Parameters:
+  UserPoolId:
+    Type: String
+    Description: User Pool for Cognito authentication
+    Default: "us-east-1_av7KxAnez"
+  Audience:
+    Type: String
+    Description: Client ID in user pool 
+    Default: "1jajhlcqd1rbcbi9m0qhc3ovt8" 
+
+Globals:
+  Function:
+    Runtime: python3.8
+    Timeout: 15
+
+Resources:
+  HttpApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      Auth:
+        DefaultAuthorizer: UserAuth
+        Authorizers:
+          UserAuth:
+            IdentitySource: "$request.header.Authorization"
+            JwtConfiguration:
+              issuer: !Sub https://cognito-idp.${AWS::Region}.amazonaws.com/${UserPoolId}
+              audience:
+                - !Ref Audience
+      CorsConfiguration:
+        AllowHeaders:
+          - Authorization
+          - Content-Type
+        AllowMethods: 
+          - GET
+          - POST
+        AllowOrigins:
+          - http://localhost:8080
+          - https://simon50.com
+          - https://www.simon50.com
+          - http://simon50.com
+          - http://www.simon50.com
+          - http://deiangels.com
+          - http://localhost:3000
+          
+  # Test HTTP call
+  test:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      Handler: test.lambda_handler
+      Description: 'Test API response'
+      Role: 'arn:aws:iam::819527464446:role/LambdaAdmin'
+      CodeUri: functions/
+      Events:
+        TestCall:
+          Type: HttpApi
+          Properties:
+            Path: /
+            Method: GET
+            ApiId: !Ref HttpApi
+            Auth:
+              Authorizer: NONE
+  # Test HTTP call
+  testAuth:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      Handler: testAuth.lambda_handler
+      Description: 'Authenticated Test API response'
+      Role: 'arn:aws:iam::819527464446:role/LambdaAdmin'
+      CodeUri: functions/
+      Events:
+        TestAuth:
+          Type: HttpApi
+          Properties:
+            Path: /auth
+            Method: GET
+            ApiId: !Ref HttpApi
+        
+
+  # Auth HTTP Calls
+  login:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      Handler: login.lambda_handler
+      Description: 'Process userID/Password or refreshToken authentication'
+      Role: 'arn:aws:iam::819527464446:role/LambdaAdmin'
+      CodeUri: functions/auth
+      Events:
+        Login:
+          Type: HttpApi
+          Properties:
+            Path: /auth/login
+            Method: GET
+            ApiId: !Ref HttpApi
+            Auth:
+              Authorizer: NONE
+              
+              
+  # Company HTTP Calls
+  getCompany:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      Handler: getCompany.lambda_handler
+      Description: 'Get all details for a specific company'
+      Role: 'arn:aws:iam::819527464446:role/LambdaAdmin'
+      CodeUri: functions/company
+      Events:
+        GetCompany:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /company
+            Method: GET
+  getCompanyList:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      Handler: getCompanyList.lambda_handler
+      Description: 'Get summary details for all companies matching the optional filter'
+      Role: 'arn:aws:iam::819527464446:role/LambdaAdmin'
+      CodeUri: functions/company
+      Events:
+        GetCompanyList:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /company/list
+            Method: GET            
+  getCompanyEmailList:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      Handler: getCompanyEmailList.lambda_handler
+      Description: 'Get summary details for all companies showing email status'
+      Role: 'arn:aws:iam::819527464446:role/LambdaAdmin'
+      CodeUri: functions/company
+      Events:
+        GetCompanyEmailList:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /company/email
+            Method: GET            
+              
+              
+ # Person HTTP Calls
+  getPerson:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      Handler: getPerson.lambda_handler
+      Description: 'Get all data held on a specific person'
+      Role: 'arn:aws:iam::819527464446:role/LambdaAdmin'
+      CodeUri: functions/person
+      Events:
+        GetPerson:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /person
+            Method: GET
+  getPersonList:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      Handler: getPersonList.lambda_handler
+      Description: 'Get summary details of all Person records matching the optional filter'
+      Role: 'arn:aws:iam::819527464446:role/LambdaAdmin'
+      CodeUri: functions/person
+      Events:
+        GetPersonList:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /person/list
+            Method: GET              
+  updatePerson:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      Handler: updatePerson.lambda_handler
+      Description: 'Update Person record'
+      Role: 'arn:aws:iam::819527464446:role/LambdaAdmin'
+      CodeUri: functions/person
+      Events:
+        UpdatePerson:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /person
+            Method: POST            
+            
+            
+  # eMail HTTP Calls
+  templateList:
+    Type: 'AWS::Serverless::Function' 
+    Properties:
+      Handler: templateList.lambda_handler
+      Description: 'List all Templates'
+      Role: 'arn:aws:iam::819527464446:role/LambdaAdmin'
+      CodeUri: functions/email
+      Events:
+        TemplateList:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /email/template/list
+            Method: GET
+  getTemplate:
+    Type: 'AWS::Serverless::Function' 
+    Properties:
+      Handler: getTemplate.lambda_handler
+      Description: 'Get Template Data'
+      Role: 'arn:aws:iam::819527464446:role/LambdaAdmin'
+      CodeUri: functions/email
+      Events:
+        GetTemplate:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /email/template
+            Method: GET
+  sendEmail:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      Handler: sendEmail.lambda_handler
+      Description: 'Send email communication to company'
+      Role: 'arn:aws:iam::819527464446:role/LambdaAdmin'
+      CodeUri: functions/email
+      Events:
+        SendEmail:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /email
+            Method: POST
+
+  # CTA HTTP Calls
+  validateLink:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      Handler: validateLink.lambda_handler
+      Description: 'Validate the CTA link'
+      Role: 'arn:aws:iam::819527464446:role/LambdaAdmin'
+      CodeUri: functions/cta
+      Events:
+        ValidateLink:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /cta/validate
+            Method: GET
+            Auth:
+              Authorizer: NONE
+  confirmationResponse:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      Handler: confirmationResponse.lambda_handler
+      Description: 'Send email communication to company'
+      Role: 'arn:aws:iam::819527464446:role/LambdaAdmin'
+      CodeUri: functions/cta
+      Events:
+        ConfirmationResponse:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /cta/confirmation
+            Method: GET
+            Auth:
+              Authorizer: NONE
+  makeAsk:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      Handler: makeAsk.lambda_handler
+      Description: 'Post company request to Company reporting'
+      Role: 'arn:aws:iam::819527464446:role/LambdaAdmin'
+      CodeUri: functions/cta
+      Events:
+        MakeAsk:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /cta/ask
+            Method: POST
+            Auth:
+              Authorizer: NONE
+  postComment:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      Handler: postComment.lambda_handler
+      Description: 'Post company request to Company reporting'
+      Role: 'arn:aws:iam::819527464446:role/LambdaAdmin'
+      CodeUri: functions/cta
+      Events:
+        PostComment:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /cta/comment
+            Method: POST
+            Auth:
+              Authorizer: NONE
+  uploadReportFile:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      Handler: uploadReportFile.lambda_handler
+      Description: 'Upload reporting file to S3'
+      Role: 'arn:aws:iam::819527464446:role/LambdaAdmin'
+      CodeUri: functions/cta
+      Events:
+        UploadReportFile:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /cta/upload
+            Method: POST
+            Auth:
+              Authorizer: NONE
+
+  # File HTTP Calls
+  uploadFile:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      Handler: uploadFile.lambda_handler
+      Description: 'Upload file to S3'
+      Role: 'arn:aws:iam::819527464446:role/LambdaAdmin'
+      CodeUri: functions/file
+      Events:
+        UploadFile:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /file
+            Method: POST
