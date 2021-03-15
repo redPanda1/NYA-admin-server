@@ -72,16 +72,45 @@ def getComment(emailData):
 # Get company list information filtered by status, name or reporting status
 def lambda_handler(event, context):
 
+    # Get period from parameters
+    try:
+        reportingPeriod = event["queryStringParameters"]['period']
+    except Exception as e:
+        return exception("missing parameter: period")
+    
     # Get filter from parameters
     try:
         statusFilter = event["queryStringParameters"]['status']
     except Exception as e:
-        statusFilter = 'active'
+        statusFilter = ''
 
     try:
-        if len(statusFilter) > 0:
+        reportCompleted = event["queryStringParameters"]["reportCompleted"].lower() in ['true', '1']
+    except Exception as e:
+        reportCompleted = None
+
+    nameFilter="beast"
+    # try:
+    #     nameFilter = event["queryStringParameters"]['name'].lower()
+    # except Exception as e:
+    #     nameFilter = ''
+
+    try:
+        if reportCompleted is not None:
             scanResponse = companyTable.scan(
-                FilterExpression = Attr('status').eq(statusFilter),
+                FilterExpression = Attr('reportCompleted').eq(reportCompleted), 
+                ProjectionExpression = 'id, logo, #n, reportingContactID, nyaContactID, #l, city, #st, #c, reporting',
+                ExpressionAttributeNames = {'#n': 'name', '#l': 'location', '#st': 'state', '#c': 'country'}
+            )
+        elif len(statusFilter) > 0:
+            scanResponse = companyTable.scan(
+                FilterExpression = Attr('compStatus').eq(statusFilter),
+                ProjectionExpression = 'id, logo, #n, reportingContactID, nyaContactID, #l, city, #st, #c, reporting',
+                ExpressionAttributeNames = {'#n': 'name', '#l': 'location', '#st': 'state', '#c': 'country'}
+            )
+        elif len(nameFilter) > 0:
+            scanResponse = companyTable.scan(
+                FilterExpression = Attr('search').contains(nameFilter) ,
                 ProjectionExpression = 'id, logo, #n, reportingContactID, nyaContactID, #l, city, #st, #c, reporting',
                 ExpressionAttributeNames = {'#n': 'name', '#l': 'location', '#st': 'state', '#c': 'country'}
             )
@@ -96,6 +125,9 @@ def lambda_handler(event, context):
         for company in scanResponse['Items']:
             companyData = {}
             companyData["id"] = company["id"]
+            companyData["period"] = reportingPeriod 
+            
+            companyData["_all"] = company
 
             if "logo" in company:
                 companyData["logo"] = company["logo"]
@@ -119,21 +151,23 @@ def lambda_handler(event, context):
                 if "country" in company:
                     companyData["location"] += ", "
                     companyData["location"] += company["country"]
+            companyData["emailData"] = getEmailData(company['id'], reportingPeriod)
+            companyData["comment"] = getComment(companyData["emailData"])
             if "reporting" not in company:
-                companyData["lastReport"] = "none" 
+                companyData["reportCompleted"] = False 
+            elif reportingPeriod not in company["reporting"]:
+                companyData["reportCompleted"] = False 
             else:
-                # Work out last successful reporting period (if any)
-                lastReport = []
-                reportingPeriods = [*company["reporting"]]
-                for reportingPeriod in reportingPeriods:
-                    if "confirmed" in company["reporting"][reportingPeriod] and company["reporting"][reportingPeriod]:
-                        lastReport.append(reportingPeriod)
-                lastReport.sort(reverse=True)
-                print(lastReport[0]) 
-            # Collect all data on company
+                reportingData = company["reporting"][reportingPeriod]
+                companyData["reportCompleted"] = reportingData["confirmed"]
+                companyData["reporterID"] = reportingData["reporterID"] 
+                companyData["reporter"] = personName(reportingData["reporterID"])
+                companyData["timestamp"] = reportingData["timestamp"]
+
             companyList.append(companyData)
 
         # Return data
+        companies = scanResponse['Items']
         # Build response body
         responseData = {}
         responseData['success'] = True
