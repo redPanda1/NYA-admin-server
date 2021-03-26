@@ -82,13 +82,13 @@ def lambda_handler(event, context):
         if len(statusFilter) > 0:
             scanResponse = companyTable.scan(
                 FilterExpression = Attr('status').eq(statusFilter),
-                ProjectionExpression = 'id, logo, #n, reportingContactID, nyaContactID, #l, city, #st, #c, reporting',
-                ExpressionAttributeNames = {'#n': 'name', '#l': 'location', '#st': 'state', '#c': 'country'}
+                ProjectionExpression = 'id, #s, logo, #n, reportingContactID, nyaContactID, #l, city, #st, #c, reporting',
+                ExpressionAttributeNames = {'#s': 'status', '#n': 'name', '#l': 'location', '#st': 'state', '#c': 'country'}
             )
         else:
             scanResponse = companyTable.scan(
-                ProjectionExpression = 'id, logo, #n, reportingContactID, nyaContactID, #l, city, #st, #c, reporting',
-                ExpressionAttributeNames = {'#n': 'name', '#l': 'location', '#st': 'state', '#c': 'country'}
+                ProjectionExpression = 'id, #s, logo, #n, reportingContactID, nyaContactID, #l, city, #st, #c, reporting',
+                ExpressionAttributeNames = {'#s': 'status', '#n': 'name', '#l': 'location', '#st': 'state', '#c': 'country'}
             )
 
         # Iterate over companies to get email data
@@ -97,6 +97,8 @@ def lambda_handler(event, context):
             companyData = {}
             companyData["id"] = company["id"]
 
+            if "status" in company:
+                companyData["status"] = company["status"]
             if "logo" in company:
                 companyData["logo"] = company["logo"]
             if "name" in company:
@@ -129,7 +131,7 @@ def lambda_handler(event, context):
                     if "confirmed" in company["reporting"][reportingPeriod] and company["reporting"][reportingPeriod]:
                         lastReport.append(reportingPeriod)
                 lastReport.sort(reverse=True)
-                print(lastReport[0]) 
+                companyData["lastReport"] = lastReport[0]
             # Collect all data on company
             companyList.append(companyData)
 

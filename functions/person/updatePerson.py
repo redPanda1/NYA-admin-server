@@ -4,6 +4,8 @@ import json
 import re
 import datetime
 from decimal import Decimal
+from boto3.dynamodb.conditions import Key
+
 
 def exception(e):
     # Response for errors
@@ -20,12 +22,24 @@ def response(data):
         'body': json.dumps(data)
     }
 
+def companyName(id):
+    companyResponse = companyTable.query(
+        KeyConditionExpression=Key('id').eq(id)
+    )
+     # Ensure user record exists
+    companyRecord = companyResponse['Items'][0]
+    if companyRecord is None:
+        return exception('No company record found: ' + id)
+    return companyRecord["name"]
 
-# Process update Person record
+dynamodb = boto3.resource('dynamodb')
+personTable = dynamodb.Table('Person')
+companyTable = dynamodb.Table('Companies')
+
+
+
+# Update Person record
 def lambda_handler(event, context):
-    dynamodb = boto3.resource('dynamodb')
-    personTable = dynamodb.Table('Person')
-
     # Extract Query parameters & Validate
     if 'queryStringParameters' not in event:
         return exception('No query parameters in event - check API Gateway configuration')
@@ -63,12 +77,33 @@ def lambda_handler(event, context):
             expressionAttributeNames["#s"]="status"
 
         # Basic Data
-        if 'familyName' in updatedPersonRecord.keys():
-            updateExpression+=", familyName= :fn"
-            expressionAttributeValues[":fn"]=updatedPersonRecord["familyName"]
-        if 'givenName' in updatedPersonRecord.keys():
-            updateExpression+=", givenName= :gn"
-            expressionAttributeValues[":gn"]=updatedPersonRecord["givenName"]
+        # If a person Name has been specified, deconstruct givenName and familyName
+        if 'personName' in updatedPersonRecord.keys():
+            nameArray = updatedPersonRecord["personName"].split(' ')
+            if len(nameArray) == 2:
+                updateExpression+=", givenName= :gn"
+                expressionAttributeValues[":gn"]=nameArray[0]
+                updateExpression+=", familyName= :fn"
+                expressionAttributeValues[":fn"]=nameArray[1]
+            elif len(nameArray) == 1:
+                updateExpression+=", familyName= :fn"
+                expressionAttributeValues[":fn"]=nameArray[0]
+            elif len(nameArray) > 2:
+                updateExpression+=", familyName= :fn"
+                expressionAttributeValues[":fn"]=nameArray[len(nameArray) - 1]
+                givenNames = ''
+                for i in range(0, len(nameArray)-1):
+                    givenNames += nameArray[i]
+                    givenNames += ' '
+                updateExpression+=", givenName= :gn"
+                expressionAttributeValues[":gn"]=givenNames
+        else:
+            if 'familyName' in updatedPersonRecord.keys():
+                updateExpression+=", familyName= :fn"
+                expressionAttributeValues[":fn"]=updatedPersonRecord["familyName"]
+            if 'givenName' in updatedPersonRecord.keys():
+                updateExpression+=", givenName= :gn"
+                expressionAttributeValues[":gn"]=updatedPersonRecord["givenName"]
         if 'photoURL' in updatedPersonRecord.keys():
             updateExpression+=", photoURL= :pu"
             expressionAttributeValues[":pu"]=updatedPersonRecord["photoURL"]
@@ -134,6 +169,10 @@ def lambda_handler(event, context):
         # Build response body
         responseData = {}
         responseData['data'] = returnData["Attributes"]
+        # enhance with company name and id
+        responseData['data']['id'] = queryParams['id']
+        if "companyID" in returnData["Attributes"]:
+            responseData['data']["companyName"] = companyName(returnData["Attributes"]["companyID"])
         responseData['success'] = True
 
         # Return data

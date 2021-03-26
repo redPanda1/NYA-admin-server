@@ -24,112 +24,130 @@ def response(data):
         'statusCode': 200,
         'body': json.dumps(data)
     }
+    
+def sendEmail(emailRecord):
+    sendResponse = sesClient.send_templated_email(**emailRecord["data"])
+    if "ResponseMetadata" in sendResponse:
+        if "HTTPStatusCode" in sendResponse["ResponseMetadata"]:
+            if sendResponse["ResponseMetadata"]["HTTPStatusCode"] == 200:
+                return emailRecord["companyName"] + ": Sent OK"
+    return emailRecord["companyName"] + ": Failed"
+    
+    
+def getContactData(companyID):
+    returnData = {}
+    # Company Data
+    companyResponse = companyTable.get_item(Key={'id': companyID})
+    if 'Item' not in companyResponse:
+        raise ValueError(f'Invalid company ID: {companyID}')
+    companyData = companyResponse['Item']
+    returnData['companyName'] = companyData['name']
+    
+    # Company Reporting Contact
+    returnData['reportingContactID'] = companyData['reportingContactID']
+    personResponse = personTable.get_item(Key={'id': companyData['reportingContactID']})
+    if 'Item' not in personResponse:
+        raise ValueError("Invalid person ID in reporting contact:" + companyData['reportingContactID'])
+    contactPersonData = personResponse['Item']
+    returnData['reportingContactName'] = contactPersonData['givenName']
+    returnData['reportingContactEmail'] = contactPersonData['email']
+
+    # NYA Contact
+    returnData['nyaContactID'] = companyData['nyaContactID']
+    personResponse = personTable.get_item(Key={'id': companyData['nyaContactID']})
+    if 'Item' not in personResponse:
+        raise ValueError("Invalid person ID in nyaContact: " + companyData['nyaContactID'])
+    nyaPersonData = personResponse['Item']
+    returnData['nyaContactName'] = nyaPersonData['givenName']
+    returnData['nyaContactEmail'] = nyaPersonData['email']
+    
+    return returnData
+    
 
 def lambda_handler(event, context):
     SENDER_EMAIL = "simon@simon50.com"
     SENDER_NAME = "Graciela"
-    RECIPIENT = []
-    CCOPY = []
-    templateData = {}
-    companyID = ""
-    emailType = ""
-    reportingPeriod = ""
-    responseData = {}
-    reportingContactEmail = ""
-    nyaContactEmail = ""
-    
+
     # Get data from parameters
     try:
-        companyID = event["queryStringParameters"]['id']
         emailType = event["queryStringParameters"]['type']
         reportingPeriod = event["queryStringParameters"]['period']
     except Exception as e:
         return exception('Missing parameter: ' + str(e))
 
-    # Get Data from Company and Person Records
+    if not 'body' in event:
+        return exception('Invalid Data. No Company data specified in body')
+
     try:
-        # Company Data
-        companyResponse = companyTable.get_item(Key={'id': companyID})
-        if 'Item' not in companyResponse:
-            raise ValueError(f'Invalid company ID: {companyID}')
-        companyData = companyResponse['Item']
-        templateData['companyName'] = companyData['name']
+        companyList = json.loads(event['body'])
+    except Exception as e:
+        return exception('Invalid Data. No Company data specified in body')
         
-        # Company Reporting Contact
-        reportingContactID = companyData['reportingContactID']
-        personResponse = personTable.get_item(Key={'id': reportingContactID})
-        if 'Item' not in personResponse:
-            raise ValueError(f'Invalid person ID in reporting contact: {reportingContactID}')
-        contactPersonData = personResponse['Item']
-        templateData['contactName'] = contactPersonData['givenName']
-        reportingContactEmail = contactPersonData['email']
+    if len(companyList) == 0:
+        return exception('Invalid Data. No Company data specified in body')
+        
+    emailRecords = []
+    for company in companyList:
+        templateData = {}
+        emailData = {}
+        emailData["Destination"] = {}
+        emailData["Source"] = SENDER_EMAIL
+        emailData["ReplyToAddresses"] = [SENDER_EMAIL]
+        emailData["Template"] = emailType
+        emailData["ConfigurationSetName"] = "send_stats"
 
-        # NYA Contact
-        nyaContactID = companyData['nyaContactID']
-        personResponse = personTable.get_item(Key={'id': nyaContactID})
-        if 'Item' not in personResponse:
-            raise ValueError(f'Invalid person ID in nyaContact: {nyaContactID}')
-        nyaPersonData = personResponse['Item']
-        templateData['nyaContactName'] = contactPersonData['givenName']
-        nyaContactEmail = nyaPersonData['email']
+        # Get Data from Company and Person Records
+        try:
+            contactData = getContactData(company)
+            # Select receiver/cc based upon email type
+            if emailType == "preRequest":
+                emailData["Destination"]["ToAddresses"] = [contactData["nyaContactEmail"]]
+            elif emailType == "request1":
+                emailData["Destination"]["ToAddresses"] = [contactData["reportingContactEmail"]]
+                emailData["Destination"]["CcAddresses"] = [contactData["nyaContactEmail"]]
+            elif emailType == "request2":
+                emailData["Destination"]["ToAddresses"] = [contactData["reportingContactEmail"]]
+                emailData["Destination"]["CcAddresses"] = [contactData["nyaContactEmail"]]
+            elif emailType == "escalation":
+                emailData["Destination"]["ToAddresses"] = [contactData["nyaContactEmail"]]
+
+            # Set up template data
+            templateData['senderName'] = SENDER_NAME
+            templateData['companyName'] = contactData["companyName"]
+            templateData["contactName"] = contactData["reportingContactName"]
+            templateData["nyaContactName"] = contactData["nyaContactName"]
+            reportingPeriodList = reportingPeriod.split('-')
+            templateData['reportingPeriod'] = 'Q' + reportingPeriodList[1] + ', ' + reportingPeriodList[0]
+            ctaContact = contactData["nyaContactID"]
+            if emailType[:6] == 'request':
+                ctaContact = contactData["reportingContactID"]
+            templateData['cta1'] = DOMAIN + 'cta1/' + company + "?n=" + ctaContact + "&p=" + reportingPeriod
+            templateData['cta2'] = DOMAIN + 'cta2/' + company + "?n=" + ctaContact + "&p=" + reportingPeriod
+            templateData['cta3'] = DOMAIN + 'cta3/' + company + "?n=" + ctaContact + "&p=" + reportingPeriod
+            emailData["TemplateData"] = json.dumps(templateData)
+
+            # Complete Tags
+            tags = []
+            tags.append({'Name': 'companyID', 'Value': company})
+            tags.append({'Name': 'reportingPeriod', 'Value': reportingPeriod})
+            tags.append({'Name': 'emailType', 'Value': emailType})
+            emailData["Tags"] = tags
     
-    except Exception as e:
-        return exception('Unable to retrieve data from database: ' + str(e))
+            # Add to send array          
+            emailRecord = {}
+            emailRecord["companyName"] = contactData["companyName"]
+            emailRecord["data"] = emailData
+            emailRecords.append(emailRecord)
+        except Exception as e:
+            return exception('Failed to get company/person data from database: ' + str(e))
 
-    # Complete Template
-    reportingPeriodList = reportingPeriod.split('-')
-    templateData['reportingPeriod'] = 'Q' + reportingPeriodList[1] + ', ' + reportingPeriodList[0]
-    ctaContact = nyaContactID
-    if emailType[:6] == 'request':
-        ctaContact = reportingContactID
+    # Now Send
+    responseMessage = []
+    for emailRecord in emailRecords:
+        try:
+            responseMessage.append(sendEmail(emailRecord))
+        except Exception as e:
+            message = emailRecord["companyName"] + ": Failed with error - " + str(e)
+            responseMessage.append(message)
 
-    templateData['cta1'] = DOMAIN + 'cta1/' + companyID + "?n=" + ctaContact + "&p=" + reportingPeriod
-    templateData['cta2'] = DOMAIN + 'cta2/' + companyID + "?n=" + ctaContact + "&p=" + reportingPeriod
-    templateData['cta3'] = DOMAIN + 'cta3/' + companyID + "?n=" + ctaContact + "&p=" + reportingPeriod
-    templateData['senderName'] = SENDER_NAME
-
-    # Select receiver/cc based upon email type
-    if emailType == "preRequest":
-        RECIPIENT = [nyaContactEmail]
-    elif emailType == "request1":
-        RECIPIENT = [reportingContactEmail]
-        CCOPY = [nyaContactEmail]
-    elif emailType == "request2":
-        RECIPIENT = [reportingContactEmail]
-        CCOPY = [nyaContactEmail]
-    elif emailType == "escalation":
-        RECIPIENT = [nyaContactEmail]
-
-    # Complete Tags
-    TAGS = []
-    TAGS.append({'Name': 'companyID', 'Value': companyID})
-    TAGS.append({'Name': 'reportingPeriod', 'Value': reportingPeriod})
-    TAGS.append({'Name': 'emailType', 'Value': emailType})
-
-    print(templateData)
-    print(RECIPIENT)
-    print(CCOPY)
-    print(TAGS)
-            
-    try:
-        emailResponse = sesClient.send_templated_email(
-            Source=SENDER_EMAIL,
-            Destination={
-                'ToAddresses': RECIPIENT,
-                'CcAddresses': CCOPY
-            },
-            ReplyToAddresses=[
-                SENDER_EMAIL
-            ],
-            Tags=TAGS,
-            ConfigurationSetName="send_stats",
-            Template="preRequest",
-            TemplateData=json.dumps(templateData)
-        )
-        print(emailResponse)
-    except Exception as e:
-        return exception('Send email failed: ' + str(e))
-
-    # Format response
-    responseData['success'] = True
-    return response(responseData)
+    return response(responseMessage)

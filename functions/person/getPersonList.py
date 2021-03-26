@@ -2,7 +2,7 @@ import boto3
 import botocore.exceptions
 import decimal
 import json
-from boto3.dynamodb.conditions import Attr
+from boto3.dynamodb.conditions import Attr, Key
 
 def decimal_default(obj):
     if isinstance(obj, decimal.Decimal):
@@ -24,9 +24,20 @@ def response(data):
         'body': json.dumps(data, default=decimal_default)
     }
 
+def companyName(id):
+    companyResponse = companyTable.query(
+        KeyConditionExpression=Key('id').eq(id)
+    )
+     # Ensure user record exists
+    companyRecord = companyResponse['Items'][0]
+    if companyRecord is None:
+        return exception('No company record found: ' + id)
+    return companyRecord["name"]
+
 
 dynamodb = boto3.resource('dynamodb')
 personTable = dynamodb.Table('Person')
+companyTable = dynamodb.Table('Companies')
 
 def lambda_handler(event, context):
     
@@ -40,17 +51,21 @@ def lambda_handler(event, context):
         if typeFilter is not None:
             scanResponse = personTable.scan(
                 FilterExpression = Attr('status').contains(typeFilter) ,
-                ProjectionExpression = 'id, photoURL, familyName, givenName, isAngel, company, email, #l, #s, #t, city, #st',
+                ProjectionExpression = 'id, photoURL, familyName, givenName, isAngel, companyID, email, #l, #s, #t, city, #st',
                 ExpressionAttributeNames = {'#s': 'status', '#l': 'location', '#t': 'title', '#st': 'state'}
             )
         else:
             scanResponse = personTable.scan(
-                ProjectionExpression = 'id, photoURL, familyName, givenName, isAngel, company, email, #l, #s, #t, city, #st',
+                ProjectionExpression = 'id, photoURL, familyName, givenName, isAngel, companyID, email, #l, #s, #t, city, #st',
                 ExpressionAttributeNames = {'#s': 'status', '#l': 'location', '#t': 'title', '#st': 'state'}
             )
 
         # Return data
         people = scanResponse['Items']
+        for person in scanResponse['Items']:
+            if "companyID" in person:
+                person["companyName"] = companyName(person["companyID"])
+                
         # Build response body
         responseData = {}
         responseData['success'] = True

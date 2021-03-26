@@ -142,6 +142,20 @@ Resources:
             ApiId: !Ref HttpApi
             Path: /company/email
             Method: GET            
+  updateCompany:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      Handler: updateCompany.lambda_handler
+      Description: 'Update Company record'
+      Role: 'arn:aws:iam::819527464446:role/LambdaAdmin'
+      CodeUri: functions/company
+      Events:
+        UpdatePerson:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /company
+            Method: POST            
               
               
  # Person HTTP Calls
