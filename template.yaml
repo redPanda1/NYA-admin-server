@@ -344,3 +344,33 @@ Resources:
             ApiId: !Ref HttpApi
             Path: /file
             Method: POST
+
+  # Admin HTTP Calls
+  getPeriodData:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      Handler: getPeriodData.lambda_handler
+      Description: 'Get Period Data'
+      Role: 'arn:aws:iam::819527464446:role/LambdaAdmin'
+      CodeUri: functions/admin
+      Events:
+        UploadFile:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /admin/periods
+            Method: GET
+  updatePeriodData:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      Handler: updatePeriodData.lambda_handler
+      Description: 'Update Period Data'
+      Role: 'arn:aws:iam::819527464446:role/LambdaAdmin'
+      CodeUri: functions/admin
+      Events:
+        UploadFile:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /admin/periods
+            Method: POST

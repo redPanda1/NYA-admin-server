@@ -25,6 +25,7 @@ def response(data):
 
 dynamodb = boto3.resource('dynamodb')
 personTable = dynamodb.Table('Person')
+adminTable = dynamodb.Table('Admin')
 
 
 # Handler for login returns user data and tokens 
@@ -104,7 +105,6 @@ def lambda_handler(event, context):
         responseData['errorMessage'] = str(e)
         return response(responseData)
     
-
     # Get User Data
     responseUser = client.get_user(
         AccessToken=responseAuth['AuthenticationResult']['AccessToken']
@@ -129,7 +129,7 @@ def lambda_handler(event, context):
     if 'RefreshToken' in responseAuth['AuthenticationResult']:
         userData['refreshToken'] = responseAuth['AuthenticationResult']['RefreshToken']
 
-    # include person data
+    # include person data and period data
     try:
         responsePerson = personTable.query(
             KeyConditionExpression=Key('id').eq(responseUser['Username'])
@@ -158,6 +158,19 @@ def lambda_handler(event, context):
         if "email" in personRecord:
             userData['email'] = personRecord["email"]
         print(userData)
+        
+        # And period Data
+        adminQuery = adminTable.get_item(Key={'id': "0"})
+        # Ensure Admin record exists (if not we have big problems)
+        if 'Item' not in adminQuery:
+            return exception('No admin record found.')
+        periodData = adminQuery['Item']['periods']
+        
+        for period in periodData:
+            if periodData[period]['isCurrent']:
+                userData['currentPeriod'] = period 
+                userData['periodOpen'] = periodData[period]['isOpen'] 
+
     except Exception as e:
         # Other exception
         responseData = {}

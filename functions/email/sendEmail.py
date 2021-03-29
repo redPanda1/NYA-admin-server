@@ -142,12 +142,17 @@ def lambda_handler(event, context):
             return exception('Failed to get company/person data from database: ' + str(e))
 
     # Now Send
-    responseMessage = []
+    responseMessages = []
     for emailRecord in emailRecords:
         try:
-            responseMessage.append(sendEmail(emailRecord))
+            responseMessages.append(sendEmail(emailRecord))
         except Exception as e:
             message = emailRecord["companyName"] + ": Failed with error - " + str(e)
-            responseMessage.append(message)
+            responseMessages.append(message)
 
-    return response(responseMessage)
+    # Build response body
+    responseData = {}
+    responseData['success'] = True
+    responseData['data'] = responseMessages
+
+    return response(responseData)
