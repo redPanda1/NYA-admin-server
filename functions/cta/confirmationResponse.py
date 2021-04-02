@@ -73,9 +73,11 @@ def lambda_handler(event, context):
         if 'reporting' in companyData:
             reportingData = companyData['reporting']
             if reportingPeriod in reportingData:
-                responseData['success'] = False
-                responseData['errorMessage'] = 'Please note a report has already filed for this period'
-                return response(responseData)
+                if 'confirmed' in reportingData[reportingPeriod]:
+                    if reportingData[reportingPeriod]['confirmed']:
+                        responseData['success'] = False
+                        responseData['errorMessage'] = 'Please note a report has already filed for this period'
+                        return response(responseData)
 
     except Exception as e:
         return exception('Unable to verify data: ' + str(e))

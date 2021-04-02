@@ -31,7 +31,9 @@ def response(data):
 
 dynamodb = boto3.resource('dynamodb')
 companyTable = dynamodb.Table('Companies')
+# emailTable = dynamodb.Table('emailTracker')
 personTable = dynamodb.Table('Person')
+
 
 personLookUp = {}
 
@@ -92,19 +94,22 @@ def formatEmailHistory(emailData):
     returnedData.sort(key=lambda item : item["timestamp"], reverse=True)
     return returnedData
 
-
 # Get company list information filtered by status, name or reporting status
 def lambda_handler(event, context):
     # Check parameters
     if "period" not in event["queryStringParameters"]:
         return exception("missing parameter: period")
-    if "confirmed" not in event["queryStringParameters"]:
-        return exception("missing parameter: confirmed")
-
+        
     # Get period and status from parameters
     reportingPeriod = event["queryStringParameters"]['period']
-    reportCompleted = event["queryStringParameters"]["confirmed"]
+    reportCompleted = None
+        
+    if "confirmed" in event["queryStringParameters"]:
+        reportCompleted = event["queryStringParameters"]["confirmed"].lower() in ['true', '1']
 
+    print(reportingPeriod)
+    print(reportCompleted)
+    
     try:
         scanResponse = companyTable.scan(
             FilterExpression = Attr('reporting').exists(),
@@ -112,20 +117,33 @@ def lambda_handler(event, context):
             ExpressionAttributeNames = {'#n': 'name', '#l': 'location', '#st': 'state', '#c': 'country'}
             )
             
+        print("Selected Companies: " + str(len(scanResponse['Items'])))
+
         # Iterate over companies to get email data
         companyList = []
         for company in scanResponse['Items']:
+            print("Processing: " + company["name"])
+            
             # Check if we have reporting data for this period
             if reportingPeriod not in company["reporting"]:
+                print("Company: " + company["name"] + " has no reporting period")
                 continue
 
-            # Check status matches parameter
-            isReportCompleted = False
-            if "confirmed" in company["reporting"][reportingPeriod]:
-                if company["reporting"][reportingPeriod]["confirmed"]:
-                    isReportCompleted = True
-            if reportCompleted != isReportCompleted:
-                continue
+            # Check status matches parameter (if needed)
+            if reportCompleted != None:
+                print("Checking report status>>>")
+                
+                isReportCompleted = False
+                if "confirmed" in company["reporting"][reportingPeriod]:
+                    if company["reporting"][reportingPeriod]["confirmed"]:
+                        isReportCompleted = True
+                if reportCompleted != isReportCompleted:
+                    print("Company: " + company["name"] + " has no completed report")
+                    continue
+                    # print("Company: " + company["name"] + " has no completed report - " + str(json.dumps(company["reporting"][reportingPeriod])))
+
+            print("Company: " + company["name"] + " GOOD TO GO>>>> " + str(json.dumps(company["reporting"][reportingPeriod])))
+
 
             # Good to send back data            
             companyData = {}

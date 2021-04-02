@@ -142,6 +142,20 @@ Resources:
             ApiId: !Ref HttpApi
             Path: /company/email
             Method: GET            
+  getCompanyListStatus:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      Handler: getCompanyListStatus.lambda_handler
+      Description: 'Get details for companies based upon status/period filters'
+      Role: 'arn:aws:iam::819527464446:role/LambdaAdmin'
+      CodeUri: functions/company
+      Events:
+        GetCompanyListStatus:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /company/list/status
+            Method: GET            
   updateCompany:
     Type: 'AWS::Serverless::Function'
     Properties:
@@ -354,7 +368,7 @@ Resources:
       Role: 'arn:aws:iam::819527464446:role/LambdaAdmin'
       CodeUri: functions/admin
       Events:
-        UploadFile:
+        GetPeriodData:
           Type: HttpApi
           Properties:
             ApiId: !Ref HttpApi
@@ -368,9 +382,25 @@ Resources:
       Role: 'arn:aws:iam::819527464446:role/LambdaAdmin'
       CodeUri: functions/admin
       Events:
-        UploadFile:
+        UpdatePeriodData:
           Type: HttpApi
           Properties:
             ApiId: !Ref HttpApi
             Path: /admin/periods
             Method: POST
+
+  # Admin HTTP Calls
+  getDashboardData:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      Handler: getDashboardData.lambda_handler
+      Description: 'Get Dashboard Data'
+      Role: 'arn:aws:iam::819527464446:role/LambdaAdmin'
+      CodeUri: functions/dashboard
+      Events:
+        GetDashboardData:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /dashboard
+            Method: GET

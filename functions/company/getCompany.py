@@ -30,38 +30,72 @@ table = dynamodb.Table('Companies')
 personTable = dynamodb.Table('Person')
 emailTable = dynamodb.Table('emailTracker')
 
+personLookUp = {}
+
+def personDetails(id):
+    # check if we have looked this one up before
+    if id in personLookUp:
+        return personLookUp[id]
+
+    # else Look up now
+    responsePerson = personTable.query(
+        KeyConditionExpression=Key('id').eq(id)
+    )
+     # Ensure user record exists
+    personRecord = responsePerson['Items'][0]
+    if personRecord is None:
+        return exception('No user record found: ' + id)
+
+    # populate data
+    fullName = ''
+    if "givenName" in personRecord:
+        fullName = personRecord["givenName"] + " "
+    if "familyName" in personRecord:
+        fullName += personRecord["familyName"] 
+    personLookUp[id] = {}
+    personLookUp[id]["name"] = fullName
+    personLookUp[id]["email"] = personRecord["email"] if ("email" in personRecord) else None
+    personLookUp[id]["photoURL"] = personRecord["photoURL"] if ("photoURL" in personRecord) else None
+    
+    return personLookUp[id]
 
 def personName(id):
-    responsePerson = personTable.query(
-        KeyConditionExpression=Key('id').eq(id)
-    )
-     # Ensure user record exists
-    personRecord = responsePerson['Items'][0]
-    if personRecord is None:
-        return exception('No user record found: ' + id)
-    return personRecord["givenName"] + " " + personRecord["familyName"]
+    # check if we have looked this one up before
+    if id in personLookUp:
+        return personLookUp[id]["name"]
+    else:
+        return personDetails(id)["name"]
 
 def personAvatar(id):
-    responsePerson = personTable.query(
-        KeyConditionExpression=Key('id').eq(id)
-    )
-     # Ensure user record exists
-    personRecord = responsePerson['Items'][0]
-    if personRecord is None:
-        return exception('No user record found: ' + id)
-    if "photoURL" in personRecord:
-        return personRecord["photoURL"]
-    return None
+    # check if we have looked this one up before
+    if id in personLookUp:
+        return personLookUp[id]["photoURL"]
+    else:
+        return personDetails(id)["photoURL"]
 
+def personEmail(id):
+    # check if we have looked this one up before
+    print("Get Email: " + id)
+    if id in personLookUp:
+        print("Alreadt got: ")
+        print(personLookUp[id])
+        return personLookUp[id]["email"]
+    else:
+        print("Add New: ")
+        newP = personDetails(id)
+        print(newP)
+        return newP["email"]
 
-def getEmailData(id, period):
-    scanResponse = emailTable.scan(
-            FilterExpression = Attr('companyID').eq(id) & Attr("reportingPeriod").eq(period),
-            ProjectionExpression = 'emailType, eventType, receiver, ccReceiver, #t',
-            ExpressionAttributeNames = {'#t': 'timestamp'}
-        )
-    return scanResponse["Items"]
-
+def formatEmailData(emailData):
+    returnedData = []
+    for emailRecord in emailData:
+        if "receiverID" in emailRecord:
+            emailRecord["receiver"] = personEmail(emailRecord["receiverID"])
+        if "ccReceiverID" in emailRecord:
+            emailRecord["ccReceiver"] = personEmail(emailRecord["receiverID"])
+        returnedData.append(emailRecord) 
+    returnedData.sort(key=lambda item : item["timestamp"], reverse=True)
+    return returnedData
 
 # Get Company details using id
 def lambda_handler(event, context):
@@ -94,10 +128,9 @@ def lambda_handler(event, context):
         # Append Email to Reporting Data
         if "reporting" in companyData:
             for period in companyData["reporting"]:
-                # Get Email History for company and Sort to get most recent action first
-                emailHistory = getEmailData(companyData["id"], period)
-                emailHistory.sort(key=lambda item : item["timestamp"], reverse=True)
-                companyData["reporting"][period]["email"] = emailHistory
+                if "email" in companyData["reporting"][period]:
+                    # Format Email History with email addresses & Sort to get most recent action first
+                    companyData["reporting"][period]["email"] = formatEmailData(companyData["reporting"][period]["email"])
                 if "reporterID" in companyData["reporting"][period]:
                     companyData["reporting"][period]["reporter"] = personName(companyData["reporting"][period]["reporterID"])
                 # Get Comment data for company, enhance to include Reporter Name and Sort to get most recent first

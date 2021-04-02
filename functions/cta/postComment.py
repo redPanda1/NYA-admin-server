@@ -86,10 +86,11 @@ def lambda_handler(event, context):
                     reportingData[reportingPeriod]["comments"] = [newComment]
             else:
                 reportingData[reportingPeriod] = {}
-                reportingData[reportingPeriod]["comments"] = newComment
+                reportingData[reportingPeriod]["comments"] = [newComment]
         else:
+            reportingData = {}
             reportingData[reportingPeriod] = {}
-            reportingData[reportingPeriod]["comments"] = newComment
+            reportingData[reportingPeriod]["comments"] = [newComment]
         
         print(reportingData)
         

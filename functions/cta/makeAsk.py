@@ -91,7 +91,7 @@ def lambda_handler(event, context):
             
         print(reportingData)
         
-        # Update user Record
+        # Update Company Record
         updateExpression = "SET updatedOn = :u"
         expressionAttributeValues = {':u': datetime.datetime.now().isoformat()}
 

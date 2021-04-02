@@ -31,7 +31,6 @@ def response(data):
 
 dynamodb = boto3.resource('dynamodb')
 companyTable = dynamodb.Table('Companies')
-emailTable = dynamodb.Table('emailTracker')
 personTable = dynamodb.Table('Person')
 
 def personName(id):
@@ -43,31 +42,6 @@ def personName(id):
     if personRecord is None:
         return exception('No user record found: ' + id)
     return personRecord["givenName"] + " " + personRecord["familyName"]
-
-def getEmailData(id, period):
-    scanResponse = emailTable.scan(
-            FilterExpression = Attr('companyID').eq(id) & Attr("reportingPeriod").eq(period),
-            ProjectionExpression = 'emailType, eventType, receiver, #t',
-            ExpressionAttributeNames = {'#t': 'timestamp'}
-        )
-    return scanResponse["Items"]
-
-def getComment(emailData):
-    if len(emailData) == 0:
-        return None
-    # Sort to get most recent action
-    emailData.sort(key=lambda item : item["timestamp"], reverse=True)
-    mostRecent = emailData[0]
-    timestamp = dateutil.parser.parse(mostRecent["timestamp"])
-    
-    # convert to local time
-    from_zone = tz.gettz('UTC')
-    to_zone = tz.gettz('America/New_York')
-    timestamp = timestamp.replace(tzinfo=from_zone)
-    localTime = timestamp.astimezone(to_zone)
-    comment = "Email " + mostRecent["emailType"] + " " + mostRecent["eventType"] + f" on {timestamp:%a %b %d at %I:%M %p}"
-    return comment
-
 
 # Get company list information filtered by status, name or reporting status
 def lambda_handler(event, context):
@@ -121,17 +95,19 @@ def lambda_handler(event, context):
                 if "country" in company:
                     companyData["location"] += ", "
                     companyData["location"] += company["country"]
-            if "reporting" not in company:
-                companyData["lastReport"] = "none" 
-            else:
-                # Work out last successful reporting period (if any)
+
+            # Work out last successful reporting period (if any)
+            companyData["lastReport"] = "none" 
+            if "reporting" in company:
                 lastReport = []
                 reportingPeriods = [*company["reporting"]]
                 for reportingPeriod in reportingPeriods:
                     if "confirmed" in company["reporting"][reportingPeriod] and company["reporting"][reportingPeriod]:
                         lastReport.append(reportingPeriod)
-                lastReport.sort(reverse=True)
-                companyData["lastReport"] = lastReport[0]
+                if len(lastReport) > 0:
+                    lastReport.sort(reverse=True)
+                    companyData["lastReport"] = lastReport[0]
+
             # Collect all data on company
             companyList.append(companyData)
 
