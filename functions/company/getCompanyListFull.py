@@ -30,8 +30,7 @@ def response(data):
     }
 
 dynamodb = boto3.resource('dynamodb')
-companyTable = dynamodb.Table('Companies')
-emailTable = dynamodb.Table('emailTracker')
+companyTable = dynamodb.Table('Company')
 personTable = dynamodb.Table('Person')
 
 def personName(id):
@@ -43,14 +42,6 @@ def personName(id):
     if personRecord is None:
         return exception('No user record found: ' + id)
     return personRecord["givenName"] + " " + personRecord["familyName"]
-
-def getEmailData(id, period):
-    scanResponse = emailTable.scan(
-            FilterExpression = Attr('companyID').eq(id) & Attr("reportingPeriod").eq(period),
-            ProjectionExpression = 'emailType, eventType, receiver, #t',
-            ExpressionAttributeNames = {'#t': 'timestamp'}
-        )
-    return scanResponse["Items"]
 
 def getComment(emailData):
     if len(emailData) == 0:

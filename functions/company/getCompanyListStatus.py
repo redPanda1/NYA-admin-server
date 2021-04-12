@@ -30,10 +30,8 @@ def response(data):
     }
 
 dynamodb = boto3.resource('dynamodb')
-companyTable = dynamodb.Table('Companies')
-# emailTable = dynamodb.Table('emailTracker')
+companyTable = dynamodb.Table('Company')
 personTable = dynamodb.Table('Person')
-
 
 personLookUp = {}
 
@@ -89,7 +87,7 @@ def formatEmailHistory(emailData):
         if "receiverID" in emailRecord:
             emailRecord["receiver"] = personEmail(emailRecord["receiverID"])
         if "ccReceiverID" in emailRecord:
-            emailRecord["ccReceiver"] = personEmail(emailRecord["receiverID"])
+            emailRecord["ccReceiver"] = personEmail(emailRecord["ccReceiverID"])
         returnedData.append(emailRecord) 
     returnedData.sort(key=lambda item : item["timestamp"], reverse=True)
     return returnedData

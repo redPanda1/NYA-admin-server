@@ -28,16 +28,17 @@ def companyName(id):
     companyResponse = companyTable.query(
         KeyConditionExpression=Key('id').eq(id)
     )
-     # Ensure user record exists
-    companyRecord = companyResponse['Items'][0]
-    if companyRecord is None:
+    # Ensure Company record exists
+    try:
+        companyRecord = companyResponse['Items'][0]
+    except Exception as e:
         return exception('No company record found: ' + id)
     return companyRecord["name"]
 
 
 dynamodb = boto3.resource('dynamodb')
 personTable = dynamodb.Table('Person')
-companyTable = dynamodb.Table('Companies')
+companyTable = dynamodb.Table('Company')
 
 def lambda_handler(event, context):
     

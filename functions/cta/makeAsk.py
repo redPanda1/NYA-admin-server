@@ -7,7 +7,7 @@ import datetime
 DOMAIN = "https://www.simon50.com/"
 
 dynamodb = boto3.resource('dynamodb')
-companyTable = dynamodb.Table('Companies')
+companyTable = dynamodb.Table('Company')
 personTable = dynamodb.Table('Person')
 
 def exception(e):
@@ -58,7 +58,7 @@ def lambda_handler(event, context):
         if 'Item' not in companyResponse:
             raise ValueError(f'Invalid company ID: {companyID}')
         companyData = companyResponse['Item']
-        personID = companyData['reportingContactID']
+        # personID = companyData['reportingContactID']
 
         # Person Data
         personResponse = personTable.get_item(Key={'id': personID})

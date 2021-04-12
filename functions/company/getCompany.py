@@ -3,6 +3,9 @@ import botocore.exceptions
 import json
 import decimal
 from boto3.dynamodb.conditions import Attr, Key
+from datetime import datetime
+import dateutil.parser
+
 
 def decimal_default(obj):
     if isinstance(obj, decimal.Decimal):
@@ -23,12 +26,17 @@ def response(data):
         'statusCode': 200,
         'body': json.dumps(data, default=decimal_default)
     }
+    
+def noChange(): 
+    # Response for no change in data
+    return {
+        'statusCode': 204
+    }
 
 
 dynamodb = boto3.resource('dynamodb')
-table = dynamodb.Table('Companies')
+table = dynamodb.Table('Company')
 personTable = dynamodb.Table('Person')
-emailTable = dynamodb.Table('emailTracker')
 
 personLookUp = {}
 
@@ -105,14 +113,33 @@ def lambda_handler(event, context):
         companyID = event["queryStringParameters"]['id']
     except Exception as e:
         return exception('Missing Company ID in parameters')
-
+        
+    # Get timestamp if passed
+    timestamp = None
+    if "timestamp" in event['queryStringParameters']:
+        timestamp = event['queryStringParameters']['timestamp']
     
     try:
         readResponse = table.get_item(Key={'id': companyID})
 
+        # Ensure company record exists
+        try:
+            companyData = readResponse['Item']
+        except:
+            return exception('No company record found: ' + companyID)
+
+        # Check for no update
+        if timestamp != None:
+            if "updatedOn" in companyData:
+                lastUpdate = dateutil.parser.isoparse(companyData["updatedOn"])
+                checkTimestamp = dateutil.parser.isoparse(timestamp)
+                if (checkTimestamp >= lastUpdate):
+                    return noChange()
+
         # Return data
-        companyData = readResponse['Item']
-        
+        if "updatedOn" not in companyData:
+            companyData['updatedOn'] = "2020-01-01T00:00:00"
+
         # Append Names for ease of rendering screen
         if "reportingContactID" in companyData:
             companyData["reportingContact"] = personName(companyData["reportingContactID"])

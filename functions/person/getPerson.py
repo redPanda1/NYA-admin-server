@@ -2,6 +2,8 @@ import boto3
 import botocore.exceptions
 import json
 from boto3.dynamodb.conditions import Key
+from datetime import datetime
+import dateutil.parser
 
 def exception(e):
     # Response for errors
@@ -17,23 +19,38 @@ def response(data):
         'statusCode': 200,
         'body': json.dumps(data)
     }
+    
+def noChange(): 
+    # Response for no change in data
+    return {
+        'statusCode': 204
+    }
+
 
 dynamodb = boto3.resource('dynamodb')
 personTable = dynamodb.Table('Person')
-companyTable = dynamodb.Table('Companies')
+companyTable = dynamodb.Table('Company')
 
 def getCompanyName(id):
     responseCompany = companyTable.query(
         KeyConditionExpression=Key('id').eq(id)
     )
-     # Ensure user record exists
-    companyRecord = responseCompany['Items'][0]
-    if companyRecord is None:
+    # Ensure Company record exists
+    try:
+        companyRecord = responseCompany['Items'][0]
+    except Exception as e:
         return exception('No company record found: ' + id)
-    if "name" not in companyRecord:
-        return "name missing"
     return companyRecord["name"]
 
+def personName(person):
+    returnData = ""
+    if "givenName" in person:
+        returnData = person['givenName']
+    if "familyName" in person:
+        if len(returnData) > 0:
+            returnData += " "
+        returnData += person['familyName']
+    return returnData
 
 
 def lambda_handler(event, context):
@@ -46,20 +63,36 @@ def lambda_handler(event, context):
             personID = event['requestContext']['authorizer']['jwt']['claims']['cognito:username']
         except Exception as e:
             return exception('Missing person name in parameters. Please check API configuration.' + str(e))
+    # Get timestamp if passed
+    timestamp = None
+    if "timestamp" in event['queryStringParameters']:
+        timestamp = event['queryStringParameters']['timestamp']
 
     try:
-        responsePerson = personTable.query(
-            KeyConditionExpression=Key('id').eq(personID)
-        )
-    
+        readResponse = personTable.get_item(Key={'id': personID})
+
         # Ensure person record exists
-        personRecord = responsePerson['Items'][0]
-        if personRecord is None:
-            return exception('No person record found')
+        try:
+            personRecord = readResponse['Item']
+        except:
+            return exception('No person record found: ' + personID)
         
+        # Check for no update
+        if timestamp != None:
+            if "updatedOn" in personRecord:
+                lastUpdate = dateutil.parser.isoparse(personRecord["updatedOn"])
+                checkTimestamp = dateutil.parser.isoparse(timestamp)
+                if (checkTimestamp >= lastUpdate):
+                    return noChange()
+                    
         # Build response body
         personData = {}
+        # Control Data
         personData['id'] = personID
+        if 'updatedOn' in personRecord:
+            personData['updatedOn'] = personRecord['updatedOn']
+        else: 
+            personData['updatedOn'] = "2020-01-01T00:00:00"
         # Basic Data
         if 'type' in personRecord:
             personData['type'] = personRecord['type']
@@ -67,8 +100,8 @@ def lambda_handler(event, context):
             personData['givenName'] = personRecord['givenName']
         if 'familyName' in personRecord:
             personData['familyName'] = personRecord['familyName']
-        if 'givenName' in personRecord or 'familyName' in personRecord:
-            personData['personName'] = (personRecord['givenName'] + " " + personRecord['familyName']).strip()
+        if len(personName(personRecord)) > 0:
+            personData['personName'] = personName(personRecord)
         if 'photoURL' in personRecord:
             personData['photoURL'] = personRecord['photoURL']
         if 'email' in personRecord:

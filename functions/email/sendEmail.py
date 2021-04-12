@@ -7,7 +7,7 @@ DOMAIN = "https://www.simon50.com/"
 
 sesClient = boto3.client('ses', region_name=AWS_REGION)
 dynamodb = boto3.resource('dynamodb')
-companyTable = dynamodb.Table('Companies')
+companyTable = dynamodb.Table('Company')
 personTable = dynamodb.Table('Person')
 
 def exception(e):

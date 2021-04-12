@@ -7,7 +7,7 @@ import datetime
 DOMAIN = "https://www.simon50.com/"
 
 dynamodb = boto3.resource('dynamodb')
-companyTable = dynamodb.Table('Companies')
+companyTable = dynamodb.Table('Company')
 personTable = dynamodb.Table('Person')
 
 def exception(e):
@@ -50,7 +50,7 @@ def lambda_handler(event, context):
             raise ValueError(f'Invalid company ID: {companyID}')
         companyData = companyResponse['Item']
         responseData['data'] = {'name': companyData['name']}
-        personID = companyData['reportingContactID']
+        # personID = companyData['reportingContactID']
 
         # Person Data
         personResponse = personTable.get_item(Key={'id': personID})
@@ -61,9 +61,11 @@ def lambda_handler(event, context):
         if 'reporting' in companyData:
             reportingData = companyData['reporting']
             if reportingPeriod in reportingData:
-                responseData['success'] = False
-                responseData['errorMessage'] = 'Please note a report has already been filed for this period'
-                return response(responseData)
+                if "confirmed" in reportingData[reportingPeriod]:
+                    if reportingData[reportingPeriod]["confirmed"]:
+                        responseData['success'] = False
+                        responseData['errorMessage'] = 'Please note a report has already been filed for this period'
+                        return response(responseData)
 
     except Exception as e:
         return exception('Unable to verify data: ' + str(e))

@@ -32,9 +32,21 @@ def companyName(id):
         return exception('No company record found: ' + id)
     return companyRecord["name"]
 
+def personName(person):
+    returnData = ""
+    if "givenName" in person:
+        returnData = person['givenName']
+    if "familyName" in person:
+        if len(returnData) > 0:
+            returnData += " "
+        returnData += person['familyName']
+    return returnData
+
+
+
 dynamodb = boto3.resource('dynamodb')
 personTable = dynamodb.Table('Person')
-companyTable = dynamodb.Table('Companies')
+companyTable = dynamodb.Table('Company')
 
 
 
@@ -96,7 +108,7 @@ def lambda_handler(event, context):
                     givenNames += nameArray[i]
                     givenNames += ' '
                 updateExpression+=", givenName= :gn"
-                expressionAttributeValues[":gn"]=givenNames
+                expressionAttributeValues[":gn"]=givenNames.strip()
         else:
             if 'familyName' in updatedPersonRecord.keys():
                 updateExpression+=", familyName= :fn"
@@ -169,7 +181,9 @@ def lambda_handler(event, context):
         # Build response body
         responseData = {}
         responseData['data'] = returnData["Attributes"]
-        # enhance with company name and id
+        # enhance with company name and id - and possibly personName
+        if "givenName" in responseData['data'] or "familyName" in responseData['data']:
+            responseData['data']["personName"] = personName(responseData['data'])
         responseData['data']['id'] = queryParams['id']
         if "companyID" in returnData["Attributes"]:
             responseData['data']["companyName"] = companyName(returnData["Attributes"]["companyID"])

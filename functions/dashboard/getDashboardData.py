@@ -19,7 +19,7 @@ def response(data):
 
 
 dynamodb = boto3.resource('dynamodb')
-companyTable = dynamodb.Table('Companies')
+companyTable = dynamodb.Table('Company')
 
 
 # Update Company record

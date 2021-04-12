@@ -30,7 +30,7 @@ def response(data):
     }
 
 dynamodb = boto3.resource('dynamodb')
-companyTable = dynamodb.Table('Companies')
+companyTable = dynamodb.Table('Company')
 personTable = dynamodb.Table('Person')
 
 personLookUp = {}
@@ -87,7 +87,7 @@ def formatEmailHistory(emailData):
         if "receiverID" in emailRecord:
             emailRecord["receiver"] = personEmail(emailRecord["receiverID"])
         if "ccReceiverID" in emailRecord:
-            emailRecord["ccReceiver"] = personEmail(emailRecord["receiverID"])
+            emailRecord["ccReceiver"] = personEmail(emailRecord["ccReceiverID"])
         returnedData.append(emailRecord) 
     returnedData.sort(key=lambda item : item["timestamp"], reverse=True)
     return returnedData
@@ -98,16 +98,13 @@ def lambda_handler(event, context):
     # Check parameters
     if "period" not in event["queryStringParameters"]:
         return exception("missing parameter: period")
-    if "confirmed" not in event["queryStringParameters"]:
-        return exception("missing parameter: confirmed")
 
-    # Get period and status from parameters
+    # Get period from parameters
     reportingPeriod = event["queryStringParameters"]['period']
-    reportCompleted = event["queryStringParameters"]["confirmed"]
 
     try:
         scanResponse = companyTable.scan(
-            FilterExpression = Attr('reporting').exists(),
+            FilterExpression = Attr('status').eq('active'),
             ProjectionExpression = 'id, logo, #n, reportingContactID, nyaContactID, #l, city, #st, #c, reporting',
             ExpressionAttributeNames = {'#n': 'name', '#l': 'location', '#st': 'state', '#c': 'country'}
             )
@@ -115,19 +112,7 @@ def lambda_handler(event, context):
         # Iterate over companies to get email data
         companyList = []
         for company in scanResponse['Items']:
-            # Check if we have reporting data for this period
-            if reportingPeriod not in company["reporting"]:
-                continue
-
-            # Check status matches parameter
-            isReportCompleted = False
-            if "confirmed" in company["reporting"][reportingPeriod]:
-                if company["reporting"][reportingPeriod]["confirmed"]:
-                    isReportCompleted = True
-            if reportCompleted != isReportCompleted:
-                continue
-
-            # Good to send back data            
+            # Format return data
             companyData = {}
             companyData["id"] = company["id"]
             companyData["period"] = reportingPeriod 
@@ -142,15 +127,17 @@ def lambda_handler(event, context):
             if "nyaContactID" in company:
                 companyData["nyaContactID"] = company["nyaContactID"] 
                 companyData["nyaContact"] = personName(companyData["nyaContactID"])
-            reportingData = company["reporting"][reportingPeriod]
-            if "confirmed" in reportingData:
-                companyData["reportCompleted"] = reportingData["confirmed"]
-            else:
-                companyData["reportCompleted"] = False
-            if "comments" in company["reporting"][reportingPeriod]:
-                companyData["comments"] = company["reporting"][reportingPeriod]["comments"]
-            if "email" in company["reporting"][reportingPeriod]:
-                companyData["email"] = formatEmailHistory(company["reporting"][reportingPeriod]["email"])
+            
+            companyData["reportCompleted"] = False
+            if "reporting" in company:
+                if reportingPeriod in company["reporting"]:
+                    reportingData = company["reporting"][reportingPeriod]
+                    if "confirmed" in reportingData:
+                        companyData["reportCompleted"] = reportingData["confirmed"]
+                    if "comments" in reportingData:
+                        companyData["comments"] = reportingData["comments"]
+                    if "email" in reportingData:
+                        companyData["email"] = formatEmailHistory(reportingData["email"])
 
             # Get Comment data for company, enhance to include Reporter Name and Sort to get most recent first
             # print(company)

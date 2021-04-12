@@ -30,7 +30,7 @@ def response(data):
     }
 
 dynamodb = boto3.resource('dynamodb')
-companyTable = dynamodb.Table('Companies')
+companyTable = dynamodb.Table('Company')
 personTable = dynamodb.Table('Person')
 
 def personName(id):

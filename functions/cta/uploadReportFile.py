@@ -25,7 +25,7 @@ def response(data):
 
 s3 = boto3.client('s3')
 dynamodb = boto3.resource('dynamodb')
-companyTable = dynamodb.Table('Companies')
+companyTable = dynamodb.Table('Company')
 
 
 def lambda_handler(event, context):

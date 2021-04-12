@@ -164,12 +164,26 @@ Resources:
       Role: 'arn:aws:iam::819527464446:role/LambdaAdmin'
       CodeUri: functions/company
       Events:
-        UpdatePerson:
+        UpdateCompany:
           Type: HttpApi
           Properties:
             ApiId: !Ref HttpApi
             Path: /company
             Method: POST            
+  createCompany:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      Handler: createCompany.lambda_handler
+      Description: 'Create Company record'
+      Role: 'arn:aws:iam::819527464446:role/LambdaAdmin'
+      CodeUri: functions/company
+      Events:
+        CreateCompany:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /company
+            Method: PUT            
               
               
  # Person HTTP Calls
