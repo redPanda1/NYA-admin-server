@@ -23,7 +23,7 @@ def response(data):
 dynamodb = boto3.resource('dynamodb')
 companyTable = dynamodb.Table('Company')
 
-# Update Company record
+# Create Company record
 def lambda_handler(event, context):
     # Extract data from body
     if not 'body' in event:

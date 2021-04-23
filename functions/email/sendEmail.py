@@ -4,6 +4,10 @@ from boto3.dynamodb.conditions import Key
 
 AWS_REGION = "us-east-1"
 DOMAIN = "https://www.simon50.com/"
+SENDER_EMAIL = "portfolioupdates@newyorkangels.com"
+# SENDER_EMAIL = "simon@simon50.com"
+SENDER_NAME = "Graciela"
+
 
 sesClient = boto3.client('ses', region_name=AWS_REGION)
 dynamodb = boto3.resource('dynamodb')
@@ -65,9 +69,6 @@ def getContactData(companyID):
     
 
 def lambda_handler(event, context):
-    SENDER_EMAIL = "simon@simon50.com"
-    SENDER_NAME = "Graciela"
-
     # Get data from parameters
     try:
         emailType = event["queryStringParameters"]['type']
@@ -139,20 +140,26 @@ def lambda_handler(event, context):
             emailRecord["data"] = emailData
             emailRecords.append(emailRecord)
         except Exception as e:
+            print('Failed to get company/person data from database: ' + str(e))
             return exception('Failed to get company/person data from database: ' + str(e))
 
     # Now Send
+    # Build response body
+    responseData = {}
+    responseData['success'] = True
     responseMessages = []
     for emailRecord in emailRecords:
         try:
             responseMessages.append(sendEmail(emailRecord))
         except Exception as e:
             message = emailRecord["companyName"] + ": Failed with error - " + str(e)
+            print(message)
             responseMessages.append(message)
+            responseData['success'] = False
+    
 
-    # Build response body
-    responseData = {}
-    responseData['success'] = True
     responseData['data'] = responseMessages
+
+    print("Message successfully sent")
 
     return response(responseData)

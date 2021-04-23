@@ -135,6 +135,8 @@ def lambda_handler(event, context):
                 checkTimestamp = dateutil.parser.isoparse(timestamp)
                 if (checkTimestamp >= lastUpdate):
                     return noChange()
+            else:
+                return noChange()
 
         # Return data
         if "updatedOn" not in companyData:

@@ -32,7 +32,7 @@ def companyName(id):
     try:
         companyRecord = companyResponse['Items'][0]
     except Exception as e:
-        return exception('No company record found: ' + id)
+         raise Exception("Unable to read Company: " + id)
     return companyRecord["name"]
 
 
@@ -65,7 +65,8 @@ def lambda_handler(event, context):
         people = scanResponse['Items']
         for person in scanResponse['Items']:
             if "companyID" in person:
-                person["companyName"] = companyName(person["companyID"])
+                if len(person.get("companyID")) > 0:
+                    person["companyName"] = companyName(person["companyID"])
                 
         # Build response body
         responseData = {}

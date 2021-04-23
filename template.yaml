@@ -5,12 +5,12 @@ Description: 'NYA Admin Server'
 Parameters:
   UserPoolId:
     Type: String
-    Description: User Pool for Cognito authentication
-    Default: "us-east-1_av7KxAnez"
+    Description: NYA Admin User Pool for Cognito authentication
+    Default: "us-east-1_Mcx33RgTq"
   Audience:
     Type: String
-    Description: Client ID in user pool 
-    Default: "1jajhlcqd1rbcbi9m0qhc3ovt8" 
+    Description: Client ID in NYA Admin user pool 
+    Default: "2ne4im216icdqmmu78pk1abede" 
 
 Globals:
   Function:
@@ -37,6 +37,7 @@ Resources:
         AllowMethods: 
           - GET
           - POST
+          - PUT
         AllowOrigins:
           - http://localhost:8080
           - https://simon50.com
@@ -97,8 +98,39 @@ Resources:
             ApiId: !Ref HttpApi
             Auth:
               Authorizer: NONE
-              
-              
+  passwordResetRequest:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      Handler: passwordResetRequest.lambda_handler
+      Description: 'Request password reset process be started'
+      Role: 'arn:aws:iam::819527464446:role/LambdaAdmin'
+      CodeUri: functions/auth
+      Events:
+        PasswordResetRequest:
+          Type: HttpApi
+          Properties:
+            Path: /auth/password/reset
+            Method: GET
+            ApiId: !Ref HttpApi
+            Auth:
+              Authorizer: NONE
+  userChangePassword:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      Handler: userChangePassword.lambda_handler
+      Description: 'User reset password based upon Auth challenge'
+      Role: 'arn:aws:iam::819527464446:role/LambdaAdmin'
+      CodeUri: functions/auth
+      Events:
+        UserChangePassword:
+          Type: HttpApi
+          Properties:
+            Path: /auth/password/change
+            Method: GET
+            ApiId: !Ref HttpApi
+            Auth:
+              Authorizer: NONE
+
   # Company HTTP Calls
   getCompany:
     Type: 'AWS::Serverless::Function'
@@ -228,7 +260,21 @@ Resources:
           Properties:
             ApiId: !Ref HttpApi
             Path: /person
-            Method: POST            
+            Method: POST       
+  createPerson:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      Handler: createPerson.lambda_handler
+      Description: 'Create Person record'
+      Role: 'arn:aws:iam::819527464446:role/LambdaAdmin'
+      CodeUri: functions/person
+      Events:
+        CreatePerson:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /person
+            Method: PUT            
             
             
   # eMail HTTP Calls
@@ -289,6 +335,22 @@ Resources:
           Properties:
             ApiId: !Ref HttpApi
             Path: /cta/validate
+            Method: GET
+            Auth:
+              Authorizer: NONE
+  validateLink2:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      Handler: validateLink2.lambda_handler
+      Description2: 'Validate the CTA link - Company Only'
+      Role: 'arn:aws:iam::819527464446:role/LambdaAdmin'
+      CodeUri: functions/cta
+      Events:
+        ValidateLink:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /cta/validate2
             Method: GET
             Auth:
               Authorizer: NONE
@@ -356,7 +418,23 @@ Resources:
             Method: POST
             Auth:
               Authorizer: NONE
-
+  postContact:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      Handler: postContact.lambda_handler
+      Description: 'Post Company Reporting contact'
+      Role: 'arn:aws:iam::819527464446:role/LambdaAdmin'
+      CodeUri: functions/cta
+      Events:
+        PostComment:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /cta/contact
+            Method: POST
+            Auth:
+              Authorizer: NONE
+              
   # File HTTP Calls
   uploadFile:
     Type: 'AWS::Serverless::Function'
@@ -372,6 +450,20 @@ Resources:
             ApiId: !Ref HttpApi
             Path: /file
             Method: POST
+  downloadFile:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      Handler: downloadFile.lambda_handler
+      Description: 'Download file from S3'
+      Role: 'arn:aws:iam::819527464446:role/LambdaAdmin'
+      CodeUri: functions/file
+      Events:
+        UploadFile:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /file
+            Method: GET
 
   # Admin HTTP Calls
   getPeriodData:
@@ -402,8 +494,51 @@ Resources:
             ApiId: !Ref HttpApi
             Path: /admin/periods
             Method: POST
+  getUserList:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      Handler: getUserList.lambda_handler
+      Description: 'Get List of Users'
+      Role: 'arn:aws:iam::819527464446:role/LambdaAdmin'
+      CodeUri: functions/admin
+      Events:
+        getUserList:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /admin/users
+            Method: GET
+  createNewUser:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      Handler: createNewUser.lambda_handler
+      Description: 'Create New User Record - Admin'
+      Role: 'arn:aws:iam::819527464446:role/LambdaAdmin'
+      CodeUri: functions/admin
+      Events:
+        CreateNewUser:
+          Type: HttpApi
+          Properties:
+            Path: /admin/user
+            Method: POST
+            ApiId: !Ref HttpApi
+  adminChangePassword:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      Handler: adminChangePassword.lambda_handler
+      Description: 'Change User Password - Admin'
+      Role: 'arn:aws:iam::819527464446:role/LambdaAdmin'
+      CodeUri: functions/admin
+      Events:
+        AdminChangePassword:
+          Type: HttpApi
+          Properties:
+            Path: /admin/user/password
+            Method: POST
+            ApiId: !Ref HttpApi
+            
 
-  # Admin HTTP Calls
+  # Dashboard/Home Screen HTTP Calls
   getDashboardData:
     Type: 'AWS::Serverless::Function'
     Properties:

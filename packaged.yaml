@@ -4,12 +4,12 @@ Description: NYA Admin Server
 Parameters:
   UserPoolId:
     Type: String
-    Description: User Pool for Cognito authentication
-    Default: us-east-1_av7KxAnez
+    Description: NYA Admin User Pool for Cognito authentication
+    Default: us-east-1_Mcx33RgTq
   Audience:
     Type: String
-    Description: Client ID in user pool
-    Default: 1jajhlcqd1rbcbi9m0qhc3ovt8
+    Description: Client ID in NYA Admin user pool
+    Default: 2ne4im216icdqmmu78pk1abede
 Globals:
   Function:
     Runtime: python3.8
@@ -35,6 +35,7 @@ Resources:
         AllowMethods:
         - GET
         - POST
+        - PUT
         AllowOrigins:
         - http://localhost:8080
         - https://simon50.com
@@ -49,7 +50,7 @@ Resources:
       Handler: test.lambda_handler
       Description: Test API response
       Role: arn:aws:iam::819527464446:role/LambdaAdmin
-      CodeUri: s3://com.simon50.serverless-api/0df7524228bca2ec761f92d22c33e017
+      CodeUri: s3://com.simon50.serverless-api/40d53506f00e20c2f646fbd93acb265e
       Events:
         TestCall:
           Type: HttpApi
@@ -66,7 +67,7 @@ Resources:
       Handler: testAuth.lambda_handler
       Description: Authenticated Test API response
       Role: arn:aws:iam::819527464446:role/LambdaAdmin
-      CodeUri: s3://com.simon50.serverless-api/0df7524228bca2ec761f92d22c33e017
+      CodeUri: s3://com.simon50.serverless-api/40d53506f00e20c2f646fbd93acb265e
       Events:
         TestAuth:
           Type: HttpApi
@@ -81,12 +82,46 @@ Resources:
       Handler: login.lambda_handler
       Description: Process userID/Password or refreshToken authentication
       Role: arn:aws:iam::819527464446:role/LambdaAdmin
-      CodeUri: s3://com.simon50.serverless-api/b8d5d1b650a0b463b84b0b10024bf9f4
+      CodeUri: s3://com.simon50.serverless-api/9c27e3d65e0c6d0fe0f5b8fb6a6de4a4
       Events:
         Login:
           Type: HttpApi
           Properties:
             Path: /auth/login
+            Method: GET
+            ApiId:
+              Ref: HttpApi
+            Auth:
+              Authorizer: NONE
+  passwordResetRequest:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: passwordResetRequest.lambda_handler
+      Description: Request password reset process be started
+      Role: arn:aws:iam::819527464446:role/LambdaAdmin
+      CodeUri: s3://com.simon50.serverless-api/9c27e3d65e0c6d0fe0f5b8fb6a6de4a4
+      Events:
+        PasswordResetRequest:
+          Type: HttpApi
+          Properties:
+            Path: /auth/password/reset
+            Method: GET
+            ApiId:
+              Ref: HttpApi
+            Auth:
+              Authorizer: NONE
+  userChangePassword:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: userChangePassword.lambda_handler
+      Description: User reset password based upon Auth challenge
+      Role: arn:aws:iam::819527464446:role/LambdaAdmin
+      CodeUri: s3://com.simon50.serverless-api/9c27e3d65e0c6d0fe0f5b8fb6a6de4a4
+      Events:
+        UserChangePassword:
+          Type: HttpApi
+          Properties:
+            Path: /auth/password/change
             Method: GET
             ApiId:
               Ref: HttpApi
@@ -98,7 +133,7 @@ Resources:
       Handler: getCompany.lambda_handler
       Description: Get all details for a specific company
       Role: arn:aws:iam::819527464446:role/LambdaAdmin
-      CodeUri: s3://com.simon50.serverless-api/aae91e3ee6124c7d085046fcdcc1dd30
+      CodeUri: s3://com.simon50.serverless-api/cf08d03c96058b862560a73abcaccaa3
       Events:
         GetCompany:
           Type: HttpApi
@@ -113,7 +148,7 @@ Resources:
       Handler: getCompanyList.lambda_handler
       Description: Get summary details for all companies matching the optional filter
       Role: arn:aws:iam::819527464446:role/LambdaAdmin
-      CodeUri: s3://com.simon50.serverless-api/aae91e3ee6124c7d085046fcdcc1dd30
+      CodeUri: s3://com.simon50.serverless-api/cf08d03c96058b862560a73abcaccaa3
       Events:
         GetCompanyList:
           Type: HttpApi
@@ -128,7 +163,7 @@ Resources:
       Handler: getCompanyEmailList.lambda_handler
       Description: Get summary details for all companies showing email status
       Role: arn:aws:iam::819527464446:role/LambdaAdmin
-      CodeUri: s3://com.simon50.serverless-api/aae91e3ee6124c7d085046fcdcc1dd30
+      CodeUri: s3://com.simon50.serverless-api/cf08d03c96058b862560a73abcaccaa3
       Events:
         GetCompanyEmailList:
           Type: HttpApi
@@ -143,7 +178,7 @@ Resources:
       Handler: getCompanyListStatus.lambda_handler
       Description: Get details for companies based upon status/period filters
       Role: arn:aws:iam::819527464446:role/LambdaAdmin
-      CodeUri: s3://com.simon50.serverless-api/aae91e3ee6124c7d085046fcdcc1dd30
+      CodeUri: s3://com.simon50.serverless-api/cf08d03c96058b862560a73abcaccaa3
       Events:
         GetCompanyListStatus:
           Type: HttpApi
@@ -158,7 +193,7 @@ Resources:
       Handler: updateCompany.lambda_handler
       Description: Update Company record
       Role: arn:aws:iam::819527464446:role/LambdaAdmin
-      CodeUri: s3://com.simon50.serverless-api/aae91e3ee6124c7d085046fcdcc1dd30
+      CodeUri: s3://com.simon50.serverless-api/cf08d03c96058b862560a73abcaccaa3
       Events:
         UpdateCompany:
           Type: HttpApi
@@ -173,7 +208,7 @@ Resources:
       Handler: createCompany.lambda_handler
       Description: Create Company record
       Role: arn:aws:iam::819527464446:role/LambdaAdmin
-      CodeUri: s3://com.simon50.serverless-api/aae91e3ee6124c7d085046fcdcc1dd30
+      CodeUri: s3://com.simon50.serverless-api/cf08d03c96058b862560a73abcaccaa3
       Events:
         CreateCompany:
           Type: HttpApi
@@ -188,7 +223,7 @@ Resources:
       Handler: getPerson.lambda_handler
       Description: Get all data held on a specific person
       Role: arn:aws:iam::819527464446:role/LambdaAdmin
-      CodeUri: s3://com.simon50.serverless-api/47d6a189353165a3f5c07639bb4eec62
+      CodeUri: s3://com.simon50.serverless-api/b56043f014033926ee22411df8d8e86d
       Events:
         GetPerson:
           Type: HttpApi
@@ -204,7 +239,7 @@ Resources:
       Description: Get summary details of all Person records matching the optional
         filter
       Role: arn:aws:iam::819527464446:role/LambdaAdmin
-      CodeUri: s3://com.simon50.serverless-api/47d6a189353165a3f5c07639bb4eec62
+      CodeUri: s3://com.simon50.serverless-api/b56043f014033926ee22411df8d8e86d
       Events:
         GetPersonList:
           Type: HttpApi
@@ -219,7 +254,7 @@ Resources:
       Handler: updatePerson.lambda_handler
       Description: Update Person record
       Role: arn:aws:iam::819527464446:role/LambdaAdmin
-      CodeUri: s3://com.simon50.serverless-api/47d6a189353165a3f5c07639bb4eec62
+      CodeUri: s3://com.simon50.serverless-api/b56043f014033926ee22411df8d8e86d
       Events:
         UpdatePerson:
           Type: HttpApi
@@ -228,13 +263,28 @@ Resources:
               Ref: HttpApi
             Path: /person
             Method: POST
+  createPerson:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: createPerson.lambda_handler
+      Description: Create Person record
+      Role: arn:aws:iam::819527464446:role/LambdaAdmin
+      CodeUri: s3://com.simon50.serverless-api/b56043f014033926ee22411df8d8e86d
+      Events:
+        CreatePerson:
+          Type: HttpApi
+          Properties:
+            ApiId:
+              Ref: HttpApi
+            Path: /person
+            Method: PUT
   templateList:
     Type: AWS::Serverless::Function
     Properties:
       Handler: templateList.lambda_handler
       Description: List all Templates
       Role: arn:aws:iam::819527464446:role/LambdaAdmin
-      CodeUri: s3://com.simon50.serverless-api/cc36275c009621777d3557dfc03ca2af
+      CodeUri: s3://com.simon50.serverless-api/8e90b4cdd1f5887cda09348cf814fbca
       Events:
         TemplateList:
           Type: HttpApi
@@ -249,7 +299,7 @@ Resources:
       Handler: getTemplate.lambda_handler
       Description: Get Template Data
       Role: arn:aws:iam::819527464446:role/LambdaAdmin
-      CodeUri: s3://com.simon50.serverless-api/cc36275c009621777d3557dfc03ca2af
+      CodeUri: s3://com.simon50.serverless-api/8e90b4cdd1f5887cda09348cf814fbca
       Events:
         GetTemplate:
           Type: HttpApi
@@ -264,7 +314,7 @@ Resources:
       Handler: sendEmail.lambda_handler
       Description: Send email communication to company
       Role: arn:aws:iam::819527464446:role/LambdaAdmin
-      CodeUri: s3://com.simon50.serverless-api/cc36275c009621777d3557dfc03ca2af
+      CodeUri: s3://com.simon50.serverless-api/8e90b4cdd1f5887cda09348cf814fbca
       Events:
         SendEmail:
           Type: HttpApi
@@ -279,7 +329,7 @@ Resources:
       Handler: validateLink.lambda_handler
       Description: Validate the CTA link
       Role: arn:aws:iam::819527464446:role/LambdaAdmin
-      CodeUri: s3://com.simon50.serverless-api/a05aed156661d19c8c7d01e878df4672
+      CodeUri: s3://com.simon50.serverless-api/33511c50c96cc0df03cf002c72c19650
       Events:
         ValidateLink:
           Type: HttpApi
@@ -296,7 +346,7 @@ Resources:
       Handler: confirmationResponse.lambda_handler
       Description: Send email communication to company
       Role: arn:aws:iam::819527464446:role/LambdaAdmin
-      CodeUri: s3://com.simon50.serverless-api/a05aed156661d19c8c7d01e878df4672
+      CodeUri: s3://com.simon50.serverless-api/33511c50c96cc0df03cf002c72c19650
       Events:
         ConfirmationResponse:
           Type: HttpApi
@@ -313,7 +363,7 @@ Resources:
       Handler: makeAsk.lambda_handler
       Description: Post company request to Company reporting
       Role: arn:aws:iam::819527464446:role/LambdaAdmin
-      CodeUri: s3://com.simon50.serverless-api/a05aed156661d19c8c7d01e878df4672
+      CodeUri: s3://com.simon50.serverless-api/33511c50c96cc0df03cf002c72c19650
       Events:
         MakeAsk:
           Type: HttpApi
@@ -330,7 +380,7 @@ Resources:
       Handler: postComment.lambda_handler
       Description: Post company request to Company reporting
       Role: arn:aws:iam::819527464446:role/LambdaAdmin
-      CodeUri: s3://com.simon50.serverless-api/a05aed156661d19c8c7d01e878df4672
+      CodeUri: s3://com.simon50.serverless-api/33511c50c96cc0df03cf002c72c19650
       Events:
         PostComment:
           Type: HttpApi
@@ -347,7 +397,7 @@ Resources:
       Handler: uploadReportFile.lambda_handler
       Description: Upload reporting file to S3
       Role: arn:aws:iam::819527464446:role/LambdaAdmin
-      CodeUri: s3://com.simon50.serverless-api/a05aed156661d19c8c7d01e878df4672
+      CodeUri: s3://com.simon50.serverless-api/33511c50c96cc0df03cf002c72c19650
       Events:
         UploadReportFile:
           Type: HttpApi
@@ -358,13 +408,30 @@ Resources:
             Method: POST
             Auth:
               Authorizer: NONE
+  postContact:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: postContact.lambda_handler
+      Description: Post Company Reporting contact
+      Role: arn:aws:iam::819527464446:role/LambdaAdmin
+      CodeUri: s3://com.simon50.serverless-api/33511c50c96cc0df03cf002c72c19650
+      Events:
+        PostComment:
+          Type: HttpApi
+          Properties:
+            ApiId:
+              Ref: HttpApi
+            Path: /cta/contact
+            Method: POST
+            Auth:
+              Authorizer: NONE
   uploadFile:
     Type: AWS::Serverless::Function
     Properties:
       Handler: uploadFile.lambda_handler
       Description: Upload file to S3
       Role: arn:aws:iam::819527464446:role/LambdaAdmin
-      CodeUri: s3://com.simon50.serverless-api/99b500a0ec3bf63a8cad32f943438f25
+      CodeUri: s3://com.simon50.serverless-api/d7f265d3cd84527d22c177e21bb20677
       Events:
         UploadFile:
           Type: HttpApi
@@ -373,13 +440,28 @@ Resources:
               Ref: HttpApi
             Path: /file
             Method: POST
+  downloadFile:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: downloadFile.lambda_handler
+      Description: Download file from S3
+      Role: arn:aws:iam::819527464446:role/LambdaAdmin
+      CodeUri: s3://com.simon50.serverless-api/d7f265d3cd84527d22c177e21bb20677
+      Events:
+        UploadFile:
+          Type: HttpApi
+          Properties:
+            ApiId:
+              Ref: HttpApi
+            Path: /file
+            Method: GET
   getPeriodData:
     Type: AWS::Serverless::Function
     Properties:
       Handler: getPeriodData.lambda_handler
       Description: Get Period Data
       Role: arn:aws:iam::819527464446:role/LambdaAdmin
-      CodeUri: s3://com.simon50.serverless-api/b99e8f1216df46656033532f2a09c54a
+      CodeUri: s3://com.simon50.serverless-api/d155f631c92a24c27e9c968f5f1b7671
       Events:
         GetPeriodData:
           Type: HttpApi
@@ -394,7 +476,7 @@ Resources:
       Handler: updatePeriodData.lambda_handler
       Description: Update Period Data
       Role: arn:aws:iam::819527464446:role/LambdaAdmin
-      CodeUri: s3://com.simon50.serverless-api/b99e8f1216df46656033532f2a09c54a
+      CodeUri: s3://com.simon50.serverless-api/d155f631c92a24c27e9c968f5f1b7671
       Events:
         UpdatePeriodData:
           Type: HttpApi
@@ -403,6 +485,51 @@ Resources:
               Ref: HttpApi
             Path: /admin/periods
             Method: POST
+  getUserList:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: getUserList.lambda_handler
+      Description: Get List of Users
+      Role: arn:aws:iam::819527464446:role/LambdaAdmin
+      CodeUri: s3://com.simon50.serverless-api/d155f631c92a24c27e9c968f5f1b7671
+      Events:
+        getUserList:
+          Type: HttpApi
+          Properties:
+            ApiId:
+              Ref: HttpApi
+            Path: /admin/users
+            Method: GET
+  createNewUser:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: createNewUser.lambda_handler
+      Description: Create New User Record - Admin
+      Role: arn:aws:iam::819527464446:role/LambdaAdmin
+      CodeUri: s3://com.simon50.serverless-api/d155f631c92a24c27e9c968f5f1b7671
+      Events:
+        CreateNewUser:
+          Type: HttpApi
+          Properties:
+            Path: /admin/user
+            Method: POST
+            ApiId:
+              Ref: HttpApi
+  adminChangePassword:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: adminChangePassword.lambda_handler
+      Description: Change User Password - Admin
+      Role: arn:aws:iam::819527464446:role/LambdaAdmin
+      CodeUri: s3://com.simon50.serverless-api/d155f631c92a24c27e9c968f5f1b7671
+      Events:
+        AdminChangePassword:
+          Type: HttpApi
+          Properties:
+            Path: /admin/user/password
+            Method: POST
+            ApiId:
+              Ref: HttpApi
   getDashboardData:
     Type: AWS::Serverless::Function
     Properties:

@@ -94,6 +94,9 @@ def lambda_handler(event, context):
         if 'country' in updatedCompanyRecord.keys():
             updateExpression+=", country= :cnt"
             expressionAttributeValues[":cnt"]=updatedCompanyRecord["country"]
+        if 'gustUrl' in updatedCompanyRecord.keys():
+            updateExpression+=", gustUrl= :gu"
+            expressionAttributeValues[":gu"]=updatedCompanyRecord["gustUrl"]
 
         # Contacts
         if 'nyaContactID' in updatedCompanyRecord.keys():

@@ -147,8 +147,9 @@ def lambda_handler(event, context):
             
         # Organization Data
         if 'companyID' in updatedPersonRecord.keys():
-            updateExpression+=", companyID= :cid"
-            expressionAttributeValues[":cid"]=updatedPersonRecord["companyID"]
+            if len(updatedPersonRecord.get("companyID")) > 0:
+                updateExpression+=", companyID= :cid"
+                expressionAttributeValues[":cid"]=updatedPersonRecord["companyID"]
         if 'title' in updatedPersonRecord.keys():
             updateExpression+=", title= :ttl"
             expressionAttributeValues[":ttl"]=updatedPersonRecord["title"]

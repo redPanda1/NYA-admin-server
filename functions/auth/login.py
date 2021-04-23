@@ -5,8 +5,8 @@ from boto3.dynamodb.conditions import Key
 
 
 # Constants
-USER_POOL_ID = 'us-east-1_av7KxAnez'
-APP_ID = '1jajhlcqd1rbcbi9m0qhc3ovt8'
+USER_POOL_ID = 'us-east-1_Mcx33RgTq'
+APP_ID = '2ne4im216icdqmmu78pk1abede'
 
 def exception(e):
     # Response for errors
@@ -76,8 +76,9 @@ def lambda_handler(event, context):
                 responseData['success'] = False
                 responseData['errorType'] = 'NEW_PASSWORD_REQUIRED'
                 responseData['errorMessage'] = 'A Password reset is required'
-                responseData['session'] = responseAuth['Session']
-                responseData['userID'] = responseAuth['ChallengeParameters']['USER_ID_FOR_SRP']
+                responseData['data'] = {}
+                responseData['data']['session'] = responseAuth['Session']
+                responseData['data']['userID'] = responseAuth['ChallengeParameters']['USER_ID_FOR_SRP']
                 return response(responseData)
         # Validate authentication
         if 'AuthenticationResult' not in responseAuth:
@@ -109,6 +110,15 @@ def lambda_handler(event, context):
     responseUser = client.get_user(
         AccessToken=responseAuth['AuthenticationResult']['AccessToken']
     )
+    print(responseUser)
+    
+    personID = None
+    for item in responseUser.get("UserAttributes"):
+        if item["Name"] == "custom:personID":
+            personID = item["Value"]
+            break
+    if personID == None:
+        return exception('No PersonID on user record')
 
     # Validate Return
     if 'Username' not in responseUser:
@@ -132,10 +142,19 @@ def lambda_handler(event, context):
     # include person data and period data
     try:
         responsePerson = personTable.query(
-            KeyConditionExpression=Key('id').eq(responseUser['Username'])
+            KeyConditionExpression=Key('id').eq(personID)
         )
         # Ensure user record exists
-        personRecord = responsePerson['Items'][0]
+        try:
+            personRecord = responsePerson['Items'][0]
+        except:
+            # Missing person
+            responseData = {}
+            responseData['success'] = False
+            responseData['errorType'] = 'other'
+            responseData['errorMessage'] = "Person Record Missing: " + personID
+            return response(responseData)
+
         print(personRecord)
         if personRecord is None:
             raise Exception("Missing Person record: " + responseUser['Username'])

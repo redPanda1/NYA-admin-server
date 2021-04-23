@@ -1,0 +1,10 @@
+version = 0.1
+[default]
+[default.deploy]
+[default.deploy.parameters]
+stack_name = "nyaAdminServer"
+s3_bucket = "aws-sam-cli-managed-default-samclisourcebucket-1f9ne6yrkeu5g"
+s3_prefix = "nyaAdminServer"
+region = "us-east-1"
+capabilities = "CAPABILITY_IAM"
+parameter_overrides = "UserPoolId=\"us-east-1_Mcx33RgTq\" Audience=\"2ne4im216icdqmmu78pk1abede\""

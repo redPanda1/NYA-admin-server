@@ -5,7 +5,8 @@ import decimal
 import datetime
 
 # Constants
-BUCKET_NAME = 'deiangels-data'
+# BUCKET_NAME = 'deiangels-data'
+BUCKET_NAME = 'nya.portfolio.updates'
 
 def exception(e):
     # Response for errors
@@ -45,7 +46,7 @@ def lambda_handler(event, context):
         reportingPeriod = event['queryStringParameters']['period']
     except Exception as e:
         return exception(f'Invalid patameters {str(e)}')
-    
+        
     method = event['routeKey'][:4]
 
     if method == 'POST': 
@@ -53,10 +54,14 @@ def lambda_handler(event, context):
             bodyData = event['body']
             decodedFile = base64.b64decode(bodyData)
             s3.put_object(Bucket=BUCKET_NAME, Key=filePath+'/'+fileName, Body=decodedFile)
-            s3Location = f"https://{BUCKET_NAME}.s3.amazonaws.com/{filePath}/{fileName}"
+            
+            # s3Location = f"https://{BUCKET_NAME}.s3.amazonaws.com/{filePath}/{fileName}"
+            s3Location = f"{filePath}/{fileName}"
         except Exception as e:
             # Other exception
             return exception(f'File Upload failed: {str(e)}')
+            
+        
 
         # Update Company Record
         try:
@@ -110,6 +115,7 @@ def lambda_handler(event, context):
 
             # Format record to include this report
             thisReport = {}
+            thisReport["fileLocation"] = BUCKET_NAME
             thisReport["file"] = s3Location
             thisReport["timestamp"] = datetime.datetime.now().isoformat()
             thisReport["reporterID"] = personID
