@@ -41,7 +41,7 @@ def personName(id):
     personRecord = responsePerson['Items'][0]
     if personRecord is None:
         return exception('No user record found: ' + id)
-    return personRecord["givenName"] + " " + personRecord["familyName"]
+    return personRecord.get("givenName") + " " + personRecord.get("familyName")
 
 def getComment(emailData):
     if len(emailData) == 0:

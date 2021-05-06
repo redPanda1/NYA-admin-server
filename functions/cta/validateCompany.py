@@ -30,7 +30,6 @@ def lambda_handler(event, context):
     companyID = ""
     responseData = {}
 
-
     # Get data from parameters
     try:
         companyID = event["queryStringParameters"]['companyID']

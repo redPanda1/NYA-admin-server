@@ -22,33 +22,8 @@ def response(data):
         'body': json.dumps(data)
     }
 
-def companyName(id):
-    companyResponse = companyTable.query(
-        KeyConditionExpression=Key('id').eq(id)
-    )
-     # Ensure user record exists
-    companyRecord = companyResponse['Items'][0]
-    if companyRecord is None:
-        return exception('No company record found: ' + id)
-    return companyRecord["name"]
-
-def personName(person):
-    returnData = ""
-    if "givenName" in person:
-        returnData = person['givenName']
-    if "familyName" in person:
-        if len(returnData) > 0:
-            returnData += " "
-        returnData += person['familyName']
-    return returnData
-
-
-
 dynamodb = boto3.resource('dynamodb')
 personTable = dynamodb.Table('Person')
-companyTable = dynamodb.Table('Company')
-
-
 
 # Update Person record
 def lambda_handler(event, context):
@@ -72,22 +47,15 @@ def lambda_handler(event, context):
 
         personRecord = personQuery['Item']
         updatedPersonRecord = json.loads(event['body'])
+        # Dump body for audit purposes
+        print('Data for person: ' +  queryParams['id'])
+        print(updatedPersonRecord)
         
         # Update Person Record
         updateExpression = "SET updatedOn = :u"
         expressionAttributeValues = {':u': datetime.datetime.now().isoformat()}
         expressionAttributeNames = {}
         
-        # Control Data
-        if 'type' in updatedPersonRecord.keys():
-            updateExpression+=", #t= :t"
-            expressionAttributeValues[":t"]=updatedPersonRecord["type"]            
-            expressionAttributeNames["#t"]="type"
-        if 'status' in updatedPersonRecord.keys():
-            updateExpression+=", #s= :s"
-            expressionAttributeValues[":s"]=updatedPersonRecord["status"]            
-            expressionAttributeNames["#s"]="status"
-
         # Basic Data
         # If a person Name has been specified, deconstruct givenName and familyName
         if 'personName' in updatedPersonRecord.keys():
@@ -119,52 +87,20 @@ def lambda_handler(event, context):
         if 'photoURL' in updatedPersonRecord.keys():
             updateExpression+=", photoURL= :pu"
             expressionAttributeValues[":pu"]=updatedPersonRecord["photoURL"]
-        if 'email' in updatedPersonRecord.keys():
-            if not valid_email(updatedPersonRecord["email"]):
-                return exception('Unable to update Person record, invalid email: ' + str(updatedPersonRecord["email"]))
-            updateExpression+=", email= :e"
-            expressionAttributeValues[":e"]=updatedPersonRecord["email"].lower()
-        if 'phone' in updatedPersonRecord.keys():
-            updateExpression+=", phone= :p"
-            expressionAttributeValues[":p"]=updatedPersonRecord["phone"]
-        if 'address' in updatedPersonRecord.keys():
-            updateExpression+=", address= :add"
-            expressionAttributeValues[":add"]=updatedPersonRecord["address"]
-        if 'city' in updatedPersonRecord.keys():
-            updateExpression+=", city= :c"
-            expressionAttributeValues[":c"]=updatedPersonRecord["city"]
-        if 'zip' in updatedPersonRecord.keys():
-            updateExpression+=", zip= :z"
-            expressionAttributeValues[":z"]=updatedPersonRecord["zip"]
-        if 'state' in updatedPersonRecord.keys():
-            updateExpression+=", #st= :st"
-            expressionAttributeValues[":st"]=updatedPersonRecord["state"]
-            expressionAttributeNames["#st"]="state"
-        if 'location' in updatedPersonRecord.keys():
-            updateExpression+=", #l= :l"
-            expressionAttributeValues[":l"]=updatedPersonRecord["location"]
-            expressionAttributeNames["#l"]="location"
             
-        # Organization Data
-        if 'companyID' in updatedPersonRecord.keys():
-            if len(updatedPersonRecord.get("companyID")) > 0:
-                updateExpression+=", companyID= :cid"
-                expressionAttributeValues[":cid"]=updatedPersonRecord["companyID"]
-        if 'title' in updatedPersonRecord.keys():
-            updateExpression+=", title= :ttl"
-            expressionAttributeValues[":ttl"]=updatedPersonRecord["title"]
-        if 'isAngel' in updatedPersonRecord.keys():
-            updateExpression+=", isAngel= :ia"
-            expressionAttributeValues[":ia"]=updatedPersonRecord["isAngel"]
-        
-        
         # Professional Data
-        if 'bio' in updatedPersonRecord.keys():
-            updateExpression+=", bio= :b"
-            expressionAttributeValues[":b"]=updatedPersonRecord["bio"]
         if 'linkedIn' in updatedPersonRecord.keys():
             updateExpression+=", linkedIn= :li"
             expressionAttributeValues[":li"]=updatedPersonRecord["linkedIn"]
+        if 'experience' in updatedPersonRecord.keys():
+            updateExpression+=", experience= :exp"
+            expressionAttributeValues[":exp"]=updatedPersonRecord["experience"]
+        if 'interests1' in updatedPersonRecord.keys():
+            updateExpression+=", interests1= :int1"
+            expressionAttributeValues[":int1"]=updatedPersonRecord["interests1"]
+        if 'interests2' in updatedPersonRecord.keys():
+            updateExpression+=", interests2= :int2"
+            expressionAttributeValues[":int2"]=updatedPersonRecord["interests2"]
 
         # Make sure syntax for update is correct (can't send empty expressionAttributeNames)
         if len(expressionAttributeNames) > 0:
@@ -181,13 +117,6 @@ def lambda_handler(event, context):
 
         # Build response body
         responseData = {}
-        responseData['data'] = returnData["Attributes"]
-        # enhance with company name and id - and possibly personName
-        if "givenName" in responseData['data'] or "familyName" in responseData['data']:
-            responseData['data']["personName"] = personName(responseData['data'])
-        responseData['data']['id'] = queryParams['id']
-        if "companyID" in returnData["Attributes"]:
-            responseData['data']["companyName"] = companyName(returnData["Attributes"]["companyID"])
         responseData['success'] = True
 
         # Return data
@@ -195,6 +124,4 @@ def lambda_handler(event, context):
     except Exception as e:
         return exception('Unable to update Person record: ' + str(e))
 
-
-def valid_email(email):
-    return bool(re.search(r"^[\w\.\+\-]+\@[\w]+\.[a-z]{2,5}$", email))
+    return exceeption('Unable to update Person record')

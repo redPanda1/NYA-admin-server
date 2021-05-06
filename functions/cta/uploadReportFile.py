@@ -5,7 +5,6 @@ import decimal
 import datetime
 
 # Constants
-# BUCKET_NAME = 'deiangels-data'
 BUCKET_NAME = 'nya.portfolio.updates'
 
 def exception(e):

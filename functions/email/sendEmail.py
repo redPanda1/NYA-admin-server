@@ -6,7 +6,7 @@ AWS_REGION = "us-east-1"
 DOMAIN = "https://www.simon50.com/"
 SENDER_EMAIL = "portfolioupdates@newyorkangels.com"
 # SENDER_EMAIL = "simon@simon50.com"
-SENDER_NAME = "Graciela"
+SENDER_NAME = "New York Angels"
 
 
 sesClient = boto3.client('ses', region_name=AWS_REGION)
@@ -48,22 +48,24 @@ def getContactData(companyID):
     returnData['companyName'] = companyData['name']
     
     # Company Reporting Contact
-    returnData['reportingContactID'] = companyData['reportingContactID']
-    personResponse = personTable.get_item(Key={'id': companyData['reportingContactID']})
-    if 'Item' not in personResponse:
-        raise ValueError("Invalid person ID in reporting contact:" + companyData['reportingContactID'])
-    contactPersonData = personResponse['Item']
-    returnData['reportingContactName'] = contactPersonData['givenName']
-    returnData['reportingContactEmail'] = contactPersonData['email']
+    if companyData.get('reportingContactID') != None:
+        returnData['reportingContactID'] = companyData.get('reportingContactID')
+        personResponse = personTable.get_item(Key={'id': companyData['reportingContactID']})
+        if 'Item' not in personResponse:
+            raise ValueError("Invalid person ID in reporting contact:" + companyData['reportingContactID'])
+        contactPersonData = personResponse['Item']
+        returnData['reportingContactName'] = contactPersonData['givenName']
+        returnData['reportingContactEmail'] = contactPersonData['email']
 
     # NYA Contact
-    returnData['nyaContactID'] = companyData['nyaContactID']
-    personResponse = personTable.get_item(Key={'id': companyData['nyaContactID']})
-    if 'Item' not in personResponse:
-        raise ValueError("Invalid person ID in nyaContact: " + companyData['nyaContactID'])
-    nyaPersonData = personResponse['Item']
-    returnData['nyaContactName'] = nyaPersonData['givenName']
-    returnData['nyaContactEmail'] = nyaPersonData['email']
+    if companyData.get('nyaContactID') != None:
+        returnData['nyaContactID'] = companyData['nyaContactID']
+        personResponse = personTable.get_item(Key={'id': companyData['nyaContactID']})
+        if 'Item' not in personResponse:
+            raise ValueError("Invalid person ID in nyaContact: " + companyData['nyaContactID'])
+        nyaPersonData = personResponse['Item']
+        returnData['nyaContactName'] = nyaPersonData['givenName']
+        returnData['nyaContactEmail'] = nyaPersonData['email']
     
     return returnData
     
@@ -73,6 +75,7 @@ def lambda_handler(event, context):
     try:
         emailType = event["queryStringParameters"]['type']
         reportingPeriod = event["queryStringParameters"]['period']
+        testMode = event["queryStringParameters"]['test']
     except Exception as e:
         return exception('Missing parameter: ' + str(e))
 
@@ -111,11 +114,14 @@ def lambda_handler(event, context):
                 emailData["Destination"]["CcAddresses"] = [contactData["nyaContactEmail"]]
             elif emailType == "escalation":
                 emailData["Destination"]["ToAddresses"] = [contactData["nyaContactEmail"]]
+            elif emailType == "contactRequest":
+                emailData["Destination"]["ToAddresses"] = [contactData["nyaContactEmail"]]
 
             # Set up template data
             templateData['senderName'] = SENDER_NAME
             templateData['companyName'] = contactData["companyName"]
-            templateData["contactName"] = contactData["reportingContactName"]
+            if emailType != "contactRequest":
+                templateData["contactName"] = contactData["reportingContactName"]
             templateData["nyaContactName"] = contactData["nyaContactName"]
             reportingPeriodList = reportingPeriod.split('-')
             templateData['reportingPeriod'] = 'Q' + reportingPeriodList[1] + ', ' + reportingPeriodList[0]
@@ -125,6 +131,7 @@ def lambda_handler(event, context):
             templateData['cta1'] = DOMAIN + 'cta1/' + company + "?n=" + ctaContact + "&p=" + reportingPeriod
             templateData['cta2'] = DOMAIN + 'cta2/' + company + "?n=" + ctaContact + "&p=" + reportingPeriod
             templateData['cta3'] = DOMAIN + 'cta3/' + company + "?n=" + ctaContact + "&p=" + reportingPeriod
+            templateData['cta4'] = DOMAIN + 'cta4/' + company + "?n=" + ctaContact + "&p=" + reportingPeriod
             emailData["TemplateData"] = json.dumps(templateData)
 
             # Complete Tags
@@ -143,23 +150,27 @@ def lambda_handler(event, context):
             print('Failed to get company/person data from database: ' + str(e))
             return exception('Failed to get company/person data from database: ' + str(e))
 
-    # Now Send
     # Build response body
     responseData = {}
     responseData['success'] = True
     responseMessages = []
-    for emailRecord in emailRecords:
-        try:
-            responseMessages.append(sendEmail(emailRecord))
-        except Exception as e:
-            message = emailRecord["companyName"] + ": Failed with error - " + str(e)
-            print(message)
-            responseMessages.append(message)
-            responseData['success'] = False
+
+    # If TestMode return data
+    if testMode:
+        responseData['test'] = True
+        responseMessages = emailRecords
+    else:
+        # Else Send
+        for emailRecord in emailRecords:
+            try:
+                responseMessages.append(sendEmail(emailRecord))
+                print(emailRecord.get("companyName") + ": Email sent successfully to " + emailData.get("Destination").get("ToAddresses")[0])
+            except Exception as e:
+                message = emailRecord["companyName"] + ": Failed with error - " + str(e)
+                print(message)
+                responseMessages.append(message)
+                responseData['success'] = False
     
-
     responseData['data'] = responseMessages
-
-    print("Message successfully sent")
 
     return response(responseData)

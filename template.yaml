@@ -44,7 +44,6 @@ Resources:
           - https://www.simon50.com
           - http://simon50.com
           - http://www.simon50.com
-          - http://deiangels.com
           - http://localhost:3000
           
   # Test HTTP call
@@ -338,22 +337,23 @@ Resources:
             Method: GET
             Auth:
               Authorizer: NONE
-  validateLink2:
+  validateCompany:
     Type: 'AWS::Serverless::Function'
     Properties:
-      Handler: validateLink2.lambda_handler
-      Description2: 'Validate the CTA link - Company Only'
+      Handler: validateCompany.lambda_handler
+      Description: 'Validate the CTA link - Company Only'
       Role: 'arn:aws:iam::819527464446:role/LambdaAdmin'
       CodeUri: functions/cta
       Events:
-        ValidateLink:
+        ValidateCompany:
           Type: HttpApi
           Properties:
             ApiId: !Ref HttpApi
-            Path: /cta/validate2
+            Path: /cta/validatecompany
             Method: GET
             Auth:
               Authorizer: NONE
+  
   confirmationResponse:
     Type: 'AWS::Serverless::Function'
     Properties:
@@ -431,6 +431,22 @@ Resources:
           Properties:
             ApiId: !Ref HttpApi
             Path: /cta/contact
+            Method: POST
+            Auth:
+              Authorizer: NONE
+  updateMember:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      Handler: updateMember.lambda_handler
+      Description: 'Update Person (Member) record'
+      Role: 'arn:aws:iam::819527464446:role/LambdaAdmin'
+      CodeUri: functions/cta
+      Events:
+        UpdateMember:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /cta/member
             Method: POST
             Auth:
               Authorizer: NONE

@@ -1,10 +1,13 @@
 import json
 import boto3
+from botocore.errorfactory import ClientError
 import base64
 import decimal
+import os
 
 # Constants
-BUCKET_NAME = 'deiangels-data'
+BUCKET_NAME = 'nya-portfolio-updates-public'
+
 
 def exception(e):
     # Response for errors
@@ -21,6 +24,14 @@ def response(data):
         'body': json.dumps(data)
     }
 
+def fileExists(key):
+    try:
+        s3.head_object(Bucket=BUCKET_NAME, Key=key)
+        print("File already exists: " + key)            
+        return True
+    except ClientError:
+        # Not found
+        return False
 
 s3 = boto3.client('s3')
 
@@ -39,18 +50,27 @@ def lambda_handler(event, context):
     except Exception as e:
         return exception(f'Invalid patameters {str(e)}')
     
-    method = event['routeKey'][:4]
+    # If file exists increment suffix
+    while fileExists(filePath+'/'+fileName):
+        name, extension = os.path.splitext(fileName)
+        nameArray = name.rsplit("_", 1)
+        print(nameArray)
+        if len(nameArray) > 1:
+            versionNumber = nameArray[len(nameArray)-1]
+            newVersion = int(versionNumber) + 1
+            fileName = nameArray[0] + "_" + str(newVersion) + extension
+        else:
+            fileName = name + "_1" + extension
 
-    if method == 'POST': 
-        try:
-            bodyData = event['body']
-            decodedFile = base64.b64decode(bodyData)
-            s3.put_object(Bucket=BUCKET_NAME, Key=filePath+'/'+fileName, Body=decodedFile)
-            responseData['fileName'] = f"https://{BUCKET_NAME}.s3.amazonaws.com/{filePath}/{fileName}"
-            # Return success message
-            responseData['success'] = True
-            return response(responseData)
-        except Exception as e:
-            # Other exception
-            return exception(f'File Upload failed: {str(e)}')
-          
+    try:
+        bodyData = event['body']
+        decodedFile = base64.b64decode(bodyData)
+        s3.put_object(Bucket=BUCKET_NAME, Key=filePath+'/'+fileName, Body=decodedFile)
+        responseData['fileName'] = f"https://{BUCKET_NAME}.s3.amazonaws.com/{filePath}/{fileName}"
+        # Return success message
+        responseData['success'] = True
+        return response(responseData)
+    except Exception as e:
+        # Other exception
+        return exception(f'File Upload failed: {str(e)}')
+      

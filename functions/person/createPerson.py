@@ -57,6 +57,10 @@ def lambda_handler(event, context):
         newPersonRecord["givenName"]=givenNames.strip()
     del newPersonRecord["personName"]
         
+    # Ensure email is lower case
+    if "email" in newPersonRecord:
+        newPersonRecord["email"].lower()
+        
     try:
         # Create New Person Record
         newPersonRecord["id"] = str(uuid.uuid4())

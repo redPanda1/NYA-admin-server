@@ -51,9 +51,10 @@ def lambda_handler(event, context):
             for i in range(0, len(nameArray)-1):
                 givenNames += nameArray[i]
                 givenNames += ' '
-        newPersonRecord["givenName"]=givenNames.strip()
+            newPersonRecord["givenName"]=givenNames.strip()
         newPersonRecord["id"] = str(uuid.uuid4())
         newPersonRecord["status"] = "created"
+        newPersonRecord["companyID"] = companyID
         newPersonRecord["createdOn"] = datetime.datetime.now().isoformat()
         newPersonRecord["updatedOn"] = datetime.datetime.now().isoformat()
         newPersonRecord["email"] = email
@@ -80,4 +81,5 @@ def lambda_handler(event, context):
     # Response
     responseData = {}
     responseData['success'] = True
+    responseData['data'] = event
     return response(responseData)

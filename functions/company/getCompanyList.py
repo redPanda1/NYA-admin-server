@@ -41,7 +41,12 @@ def personName(id):
     personRecord = responsePerson['Items'][0]
     if personRecord is None:
         return exception('No user record found: ' + id)
-    return personRecord["givenName"] + " " + personRecord["familyName"]
+    personName = ""
+    if "givenName" in personRecord:
+        personName = personRecord.get("givenName")
+    if "familyName" in personRecord:
+         personName += personRecord.get("familyName")
+    return personName.strip()
 
 # Get company list information filtered by status, name or reporting status
 def lambda_handler(event, context):
