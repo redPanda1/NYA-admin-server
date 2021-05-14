@@ -127,8 +127,9 @@ def lambda_handler(event, context):
         else:
             personData['isAngel'] = False
         if 'companyID' in personRecord:
-            personData['companyID'] = personRecord['companyID']
-            personData['company'] = getCompanyName(personRecord['companyID'])
+            if len(personRecord['companyID']) > 0:
+                personData['companyID'] = personRecord['companyID']
+                personData['company'] = getCompanyName(personRecord['companyID'])
         if 'title' in personRecord:
             personData['title'] = personRecord['title']
         if 'companyID' in personRecord:

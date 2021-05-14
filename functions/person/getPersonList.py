@@ -52,12 +52,12 @@ def lambda_handler(event, context):
         if typeFilter is not None:
             scanResponse = personTable.scan(
                 FilterExpression = Attr('status').contains(typeFilter) ,
-                ProjectionExpression = 'id, photoURL, familyName, givenName, isAngel, companyID, email, #l, #s, #t, city, #st',
+                ProjectionExpression = 'id, photoURL, familyName, givenName, isAngel, companyID, email, #l, #s, #t, city, #st, bio, interests1, interests2, experience, linkedIn',
                 ExpressionAttributeNames = {'#s': 'status', '#l': 'location', '#t': 'title', '#st': 'state'}
             )
         else:
             scanResponse = personTable.scan(
-                ProjectionExpression = 'id, photoURL, familyName, givenName, isAngel, companyID, email, #l, #s, #t, city, #st',
+                ProjectionExpression = 'id, photoURL, familyName, givenName, isAngel, companyID, email, #l, #s, #t, city, #st, bio, interests1, interests2, experience, linkedIn',
                 ExpressionAttributeNames = {'#s': 'status', '#l': 'location', '#t': 'title', '#st': 'state'}
             )
 

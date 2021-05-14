@@ -319,6 +319,20 @@ Resources:
             ApiId: !Ref HttpApi
             Path: /email
             Method: POST
+  sendMemberEmail:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      Handler: sendMemberEmail.lambda_handler
+      Description: 'Send email communication to NYA Member'
+      Role: 'arn:aws:iam::819527464446:role/LambdaAdmin'
+      CodeUri: functions/email
+      Events:
+        SendMemberEmail:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /email/member
+            Method: POST
 
   # CTA HTTP Calls
   validateLink:
@@ -350,6 +364,22 @@ Resources:
           Properties:
             ApiId: !Ref HttpApi
             Path: /cta/validatecompany
+            Method: GET
+            Auth:
+              Authorizer: NONE
+  validateMember:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      Handler: validateMember.lambda_handler
+      Description: 'Validate the CTA link - Member Only'
+      Role: 'arn:aws:iam::819527464446:role/LambdaAdmin'
+      CodeUri: functions/cta
+      Events:
+        ValidateMember:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /cta/validatemember
             Method: GET
             Auth:
               Authorizer: NONE
@@ -447,6 +477,22 @@ Resources:
           Properties:
             ApiId: !Ref HttpApi
             Path: /cta/member
+            Method: POST
+            Auth:
+              Authorizer: NONE
+  uploadMemberPhoto:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      Handler: uploadMemberPhoto.lambda_handler
+      Description: 'Upload photo from Member'
+      Role: 'arn:aws:iam::819527464446:role/LambdaAdmin'
+      CodeUri: functions/cta
+      Events:
+        UploadMemberPhoto:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /cta/member/photo
             Method: POST
             Auth:
               Authorizer: NONE

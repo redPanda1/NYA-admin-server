@@ -63,7 +63,7 @@ def lambda_handler(event, context):
             if reportingPeriod in reportingData:
                 if "confirmed" in reportingData[reportingPeriod]:
                     if reportingData[reportingPeriod]["confirmed"]:
-                        responseData['success'] = False
+                        responseData['success'] = True
                         responseData['errorMessage'] = 'Please note a report has already been filed for this period'
                         return response(responseData)
 

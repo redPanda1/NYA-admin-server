@@ -75,7 +75,8 @@ def lambda_handler(event, context):
     try:
         emailType = event["queryStringParameters"]['type']
         reportingPeriod = event["queryStringParameters"]['period']
-        testMode = event["queryStringParameters"]['test']
+        testMode = event["queryStringParameters"]['test'].lower() in ['true', '1']
+
     except Exception as e:
         return exception('Missing parameter: ' + str(e))
 

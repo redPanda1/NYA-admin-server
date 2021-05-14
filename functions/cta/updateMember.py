@@ -89,6 +89,9 @@ def lambda_handler(event, context):
             expressionAttributeValues[":pu"]=updatedPersonRecord["photoURL"]
             
         # Professional Data
+        if 'bio' in updatedPersonRecord.keys():
+            updateExpression+=", bio= :bio"
+            expressionAttributeValues[":bio"]=updatedPersonRecord["bio"]
         if 'linkedIn' in updatedPersonRecord.keys():
             updateExpression+=", linkedIn= :li"
             expressionAttributeValues[":li"]=updatedPersonRecord["linkedIn"]
@@ -122,6 +125,7 @@ def lambda_handler(event, context):
         # Return data
         return response(responseData)
     except Exception as e:
+        print('ERROR: Unable to update Person record: ' + str(e))
         return exception('Unable to update Person record: ' + str(e))
 
-    return exceeption('Unable to update Person record')
+    return exception('ERROR: Unable to update Person record')
