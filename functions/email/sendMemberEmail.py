@@ -5,11 +5,13 @@ from boto3.dynamodb.conditions import Key
 AWS_REGION = "us-east-1"
 DOMAIN = "https://www.simon50.com/"
 SENDER_EMAIL = "simon@newyorkangels.com"
-
+SNS_ARN = "arn:aws:sns:us-east-1:819527464446:NYA_Errors"
 
 sesClient = boto3.client('ses', region_name=AWS_REGION)
+snsClient = boto3.client('sns')
 dynamodb = boto3.resource('dynamodb')
 personTable = dynamodb.Table('Person')
+
 
 def exception(e):
     # Response for errors
@@ -32,6 +34,13 @@ def sendEmail(emailRecord):
         if "HTTPStatusCode" in sendResponse["ResponseMetadata"]:
             if sendResponse["ResponseMetadata"]["HTTPStatusCode"] == 200:
                 return emailRecord["personName"] + ": Sent OK"
+                
+    errorParams = {}
+    errorParams['activity'] = "Send Member Email"
+    errorParams['who'] = emailRecord['personName']
+    errorParams['error'] = sendResponse
+    errorParams['data'] = emailRecord
+    logError(**errorParams)
     return emailRecord["personName"] + ": Failed"
     
     
@@ -40,6 +49,17 @@ def getPersonData(personID):
     if 'Item' not in personResponse:
         raise ValueError(f'Invalid person ID: {personID}')
     return personResponse['Item']
+    
+def logError(**kwargs):
+    errorMessage = {}
+    for key, value in kwargs.items():
+        if value is not None:
+            errorMessage[key] = value
+    # Publish to SNS
+    snsClient.publish(TargetArn=SNS_ARN,
+                    Message=json.dumps({'default': json.dumps(errorMessage)}),
+                    MessageStructure='json')
+
 
 
 def lambda_handler(event, context):
@@ -74,7 +94,10 @@ def lambda_handler(event, context):
         # Get Data from Person Record
         try:
             personData = getPersonData(member)
-            emailData["Destination"]["ToAddresses"] = [personData.get("email")]
+            if "email" in personData:
+                emailData["Destination"]["ToAddresses"] = [personData["email"]]
+            else:
+                return exception(f'Email address missing for person: {personData.get("id")} {personData.get("familyName") or ""}')
             
             # Set up template data
             templateData['nyaMemberName'] = personData.get("givenName")
@@ -93,8 +116,8 @@ def lambda_handler(event, context):
             emailRecord["data"] = emailData
             emailRecords.append(emailRecord)
         except Exception as e:
-            print('Failed to get person data from database: ' + str(e))
-            return exception('Failed to get person data from database: ' + str(e))
+            print('Failed to get person data from database (no emails have been sent): ' + str(e))
+            return exception('Failed to get person data from database (no emails have been sent): ' + str(e))
 
     # Build response body
     responseData = {}
@@ -110,7 +133,7 @@ def lambda_handler(event, context):
         for emailRecord in emailRecords:
             try:
                 responseMessages.append(sendEmail(emailRecord))
-                print(emailRecord.get("personName") + ": Email sent successfully to " + emailData.get("Destination").get("ToAddresses")[0])
+                print(emailRecord["personName"] + ": Email sent successfully to " + emailRecord["data"]["Destination"]["ToAddresses"][0])
             except Exception as e:
                 message = emailRecord["personName"] + ": Failed with error - " + str(e)
                 print(message)

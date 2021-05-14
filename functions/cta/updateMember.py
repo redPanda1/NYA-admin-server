@@ -6,7 +6,6 @@ import datetime
 from decimal import Decimal
 from boto3.dynamodb.conditions import Key
 
-
 def exception(e):
     # Response for errors
     status_code = 400
@@ -21,9 +20,23 @@ def response(data):
         'statusCode': 200,
         'body': json.dumps(data)
     }
+    
+def logError(**kwargs):
+    errorMessage = {}
+    for key, value in kwargs.items():
+        if value is not None:
+            errorMessage[key] = value
+    # Publish to SNS
+    snsClient.publish(TargetArn=SNS_ARN,
+                    Message=json.dumps({'default': json.dumps(errorMessage)}),
+                    MessageStructure='json')
+    
 
 dynamodb = boto3.resource('dynamodb')
 personTable = dynamodb.Table('Person')
+snsClient = boto3.client('sns')
+SNS_ARN = "arn:aws:sns:us-east-1:819527464446:NYA_Errors"
+
 
 # Update Person record
 def lambda_handler(event, context):
@@ -125,6 +138,13 @@ def lambda_handler(event, context):
         # Return data
         return response(responseData)
     except Exception as e:
+        errorParams = {}
+        errorParams['activity'] = "CTA Update Member"
+        errorParams['key'] = queryParams['id']
+        errorParams['who'] = personRecord.get('familyName')
+        errorParams['error'] = str(e)
+        errorParams['data'] = updatedPersonRecord
+        logError(**errorParams)
         print('ERROR: Unable to update Person record: ' + str(e))
         return exception('Unable to update Person record: ' + str(e))
 
