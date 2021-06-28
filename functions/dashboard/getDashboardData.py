@@ -1,5 +1,6 @@
 import boto3
 import botocore.exceptions
+from boto3.dynamodb.conditions import Attr
 import json
 
 def exception(e):
@@ -17,10 +18,8 @@ def response(data):
         'body': json.dumps(data)
     }
 
-
 dynamodb = boto3.resource('dynamodb')
 companyTable = dynamodb.Table('Company')
-
 
 # Update Company record
 def lambda_handler(event, context):
@@ -28,7 +27,10 @@ def lambda_handler(event, context):
     # No Parameters
 
     try:
-        companyQuery = companyTable.scan()
+        statusFilter = 'active'
+        companyQuery = companyTable.scan(
+            FilterExpression = Attr('status').eq(statusFilter)
+        )
         # Ensure Company records exists
         if 'Items' not in companyQuery:
             return exception('No company records found: ')

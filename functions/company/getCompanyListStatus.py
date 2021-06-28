@@ -44,10 +44,12 @@ def personName(id):
     responsePerson = personTable.query(
         KeyConditionExpression=Key('id').eq(id)
     )
-     # Ensure user record exists
+    # Ensure user record exists
+    if "Items" not in responsePerson:
+        return "missing"
+    if len(responsePerson['Items']) == 0:
+        return "missing"
     personRecord = responsePerson['Items'][0]
-    if personRecord is None:
-        return exception('No user record found: ' + id)
         
     fullName = ''
     if "givenName" in personRecord:
@@ -70,9 +72,11 @@ def personEmail(id):
         KeyConditionExpression=Key('id').eq(id)
     )
      # Ensure user record exists
+    if "Items" not in responsePerson:
+        return "missing"
+    if len(responsePerson['Items']) == 0:
+        return "missing"
     personRecord = responsePerson['Items'][0]
-    if personRecord is None:
-        return exception('No user record found: ' + id)
         
     fullName = personRecord["givenName"] + " " + personRecord["familyName"]
     personLookUp[id] = {}
@@ -110,9 +114,9 @@ def lambda_handler(event, context):
     
     try:
         scanResponse = companyTable.scan(
-            FilterExpression = Attr('reporting').exists(),
-            ProjectionExpression = 'id, logo, #n, reportingContactID, nyaContactID, #l, city, #st, #c, reporting',
-            ExpressionAttributeNames = {'#n': 'name', '#l': 'location', '#st': 'state', '#c': 'country'}
+            FilterExpression = Attr('reporting').exists() & Attr('status').eq('active'),
+            ProjectionExpression = 'id, #s, logo, #n, reportingContactID, nyaContactID, #l, city, #st, #c, reporting',
+            ExpressionAttributeNames = {'#s': 'status', '#n': 'name', '#l': 'location', '#st': 'state', '#c': 'country'}
             )
             
         print("Selected Companies: " + str(len(scanResponse['Items'])))

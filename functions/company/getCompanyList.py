@@ -37,10 +37,12 @@ def personName(id):
     responsePerson = personTable.query(
         KeyConditionExpression=Key('id').eq(id)
     )
-     # Ensure user record exists
+    if "Items" not in responsePerson:
+        return "missing"
+    if len(responsePerson['Items']) == 0:
+        return "missing"
     personRecord = responsePerson['Items'][0]
-    if personRecord is None:
-        return exception('No user record found: ' + id)
+
     personName = ""
     if "givenName" in personRecord:
         personName = personRecord.get("givenName")

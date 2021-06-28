@@ -49,10 +49,12 @@ def personDetails(id):
     responsePerson = personTable.query(
         KeyConditionExpression=Key('id').eq(id)
     )
-     # Ensure user record exists
+    # Ensure user record exists
+    if "Items" not in responsePerson:
+        raise Exception('Missing person: ' + id)
+    if len(responsePerson['Items']) == 0:
+        raise Exception('Missing person: ' + id)
     personRecord = responsePerson['Items'][0]
-    if personRecord is None:
-        return exception('No user record found: ' + id)
 
     # populate data
     fullName = ''
@@ -85,7 +87,7 @@ def personEmail(id):
     # check if we have looked this one up before
     print("Get Email: " + id)
     if id in personLookUp:
-        print("Alreadt got: ")
+        print("Already got: ")
         print(personLookUp[id])
         return personLookUp[id]["email"]
     else:
@@ -107,7 +109,6 @@ def formatEmailData(emailData):
 
 # Get Company details using id
 def lambda_handler(event, context):
-    
     # Get Company id from parameters
     try:
         companyID = event["queryStringParameters"]['id']

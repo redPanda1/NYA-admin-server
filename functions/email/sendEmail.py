@@ -113,7 +113,12 @@ def lambda_handler(event, context):
             elif emailType == "request2":
                 emailData["Destination"]["ToAddresses"] = [contactData["reportingContactEmail"]]
                 emailData["Destination"]["CcAddresses"] = [contactData["nyaContactEmail"]]
+            elif emailType == "request3":
+                emailData["Destination"]["ToAddresses"] = [contactData["reportingContactEmail"]]
+                emailData["Destination"]["CcAddresses"] = [contactData["nyaContactEmail"]]
             elif emailType == "escalation":
+                emailData["Destination"]["ToAddresses"] = [contactData["nyaContactEmail"]]
+            elif emailType == "escalation2":
                 emailData["Destination"]["ToAddresses"] = [contactData["nyaContactEmail"]]
             elif emailType == "contactRequest":
                 emailData["Destination"]["ToAddresses"] = [contactData["nyaContactEmail"]]

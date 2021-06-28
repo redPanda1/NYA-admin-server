@@ -157,14 +157,22 @@ def lambda_handler(event, context):
             updateExpression+=", isAngel= :ia"
             expressionAttributeValues[":ia"]=updatedPersonRecord["isAngel"]
         
-        
         # Professional Data
         if 'bio' in updatedPersonRecord.keys():
-            updateExpression+=", bio= :b"
-            expressionAttributeValues[":b"]=updatedPersonRecord["bio"]
+            updateExpression+=", bio= :bio"
+            expressionAttributeValues[":bio"]=updatedPersonRecord["bio"]
         if 'linkedIn' in updatedPersonRecord.keys():
             updateExpression+=", linkedIn= :li"
             expressionAttributeValues[":li"]=updatedPersonRecord["linkedIn"]
+        if 'experience' in updatedPersonRecord.keys():
+            updateExpression+=", experience= :exp"
+            expressionAttributeValues[":exp"]=updatedPersonRecord["experience"]
+        if 'interests1' in updatedPersonRecord.keys():
+            updateExpression+=", interests1= :int1"
+            expressionAttributeValues[":int1"]=updatedPersonRecord["interests1"]
+        if 'interests2' in updatedPersonRecord.keys():
+            updateExpression+=", interests2= :int2"
+            expressionAttributeValues[":int2"]=updatedPersonRecord["interests2"]
 
         # Make sure syntax for update is correct (can't send empty expressionAttributeNames)
         if len(expressionAttributeNames) > 0:
